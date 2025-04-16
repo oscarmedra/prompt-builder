@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<phpunit bootstrap="vendor/autoload.php"
+         colors="true"
+         stopOnFailure="false">
+
+    <ini name="error_reporting" value="E_ALL & ~E_DEPRECATED" />
+
+
+    <testsuites>
+        <testsuite name="Package Test Suite">
+            <directory suffix="Test.php">tests/</directory>
+        </testsuite>
+    </testsuites>
+
+    <coverage>
+        <include path="src/" />
+    </coverage>
+
+</phpunit>
