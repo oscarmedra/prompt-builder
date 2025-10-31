@@ -1,5 +1,5 @@
 <?php
-namespace PromptBuilder;
+namespace NoahMedra\PromptBuilder;
 
 use Illuminate\Support\ServiceProvider;
 

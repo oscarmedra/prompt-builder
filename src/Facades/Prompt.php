@@ -1,5 +1,5 @@
 <?php
-namespace PromptBuilder\Facades;
+namespace NoahMedra\PromptBuilder\Facades;
 
 use Illuminate\Support\Facades\Facade;
 

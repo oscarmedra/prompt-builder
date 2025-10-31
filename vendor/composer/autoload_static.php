@@ -101,7 +101,6 @@ class ComposerStaticInita6e69edd559360318d4e474175636d06
             'Psr\\EventDispatcher\\' => 20,
             'Psr\\Container\\' => 14,
             'Psr\\Clock\\' => 10,
-            'PromptBuilder\\' => 14,
             'PhpParser\\' => 10,
             'PhpOption\\' => 10,
             'Pest\\Plugin\\' => 12,
@@ -118,6 +117,7 @@ class ComposerStaticInita6e69edd559360318d4e474175636d06
         'N' => 
         array (
             'NunoMaduro\\Collision\\' => 21,
+            'NoahMedra\\PromptBuilder\\' => 24,
         ),
         'M' => 
         array (
@@ -357,10 +357,6 @@ class ComposerStaticInita6e69edd559360318d4e474175636d06
         array (
             0 => __DIR__ . '/..' . '/psr/clock/src',
         ),
-        'PromptBuilder\\' => 
-        array (
-            0 => __DIR__ . '/../..' . '/src',
-        ),
         'PhpParser\\' => 
         array (
             0 => __DIR__ . '/..' . '/nikic/php-parser/lib/PhpParser',
@@ -400,6 +396,10 @@ class ComposerStaticInita6e69edd559360318d4e474175636d06
         'NunoMaduro\\Collision\\' => 
         array (
             0 => __DIR__ . '/..' . '/nunomaduro/collision/src',
+        ),
+        'NoahMedra\\PromptBuilder\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/src',
         ),
         'Monolog\\' => 
         array (

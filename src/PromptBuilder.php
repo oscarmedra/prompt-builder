@@ -1,5 +1,5 @@
 <?php
-namespace PromptBuilder;
+namespace NoahMedra\PromptBuilder;
 
 use Closure;
 use Illuminate\Support\Facades\App;
@@ -82,7 +82,6 @@ class PromptBuilder
         $response = app(Drivers\DriverFactory::class)
             ->make($this->model)
             ->sendPrompt($this->buildPrompt());
-
         // Préparer le dataset JSON
         $data = json_decode($response, true);
         if (json_last_error() !== JSON_ERROR_NONE) {

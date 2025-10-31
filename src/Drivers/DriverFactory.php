@@ -1,6 +1,6 @@
 <?php
 
-namespace PromptBuilder\Drivers;
+namespace NoahMedra\PromptBuilder\Drivers;
 
 use InvalidArgumentException;
 
