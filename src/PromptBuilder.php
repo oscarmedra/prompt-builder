@@ -28,7 +28,6 @@ class PromptBuilder
     {   
         $this->instructions = collect([]);
         $this->manager = new HistoryManager();
-        $this->driver = new OllamaDriver();
     }
 
 
