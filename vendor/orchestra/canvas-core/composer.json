@@ -27,24 +27,25 @@
         }
     },
     "require": {
-        "php": "^8.0",
-        "illuminate/console": "^9.52.15",
-        "illuminate/filesystem": "^9.52.15"
+        "php": "^8.1",
+        "composer-runtime-api": "^2.2",
+        "composer/semver": "^3.0",
+        "illuminate/console": "^10.38.1",
+        "illuminate/filesystem": "^10.38.1",
+        "symfony/polyfill-php83": "^1.28"
     },
     "require-dev": {
-        "fakerphp/faker": "^1.21",
-        "laravel/framework": "^9.52.15",
-        "laravel/pint": "^1.1",
+        "laravel/pint": "^1.6",
+        "laravel/framework": "^10.38.1",
         "mockery/mockery": "^1.5.1",
-        "orchestra/testbench-core": "^7.31",
-        "orchestra/workbench": "^0.3",
+        "orchestra/testbench-core": "^8.19",
         "phpstan/phpstan": "^1.10.6",
-        "phpunit/phpunit": "^9.6",
-        "symfony/yaml": "^6.0.9"
+        "phpunit/phpunit": "^10.1",
+        "symfony/yaml": "^6.2"
     },
     "conflict": {
-        "orchestra/canvas": "<7.10.0",
-        "orchestra/testbench-core": "<7.25.0"
+        "orchestra/canvas": "<8.11.0",
+        "orchestra/testbench-core": "<8.2.0"
     },
     "config": {
         "sort-packages": true
@@ -54,7 +55,7 @@
     },
     "extra": {
         "branch-alias": {
-            "dev-master": "8.0-dev"
+            "dev-master": "9.0-dev"
         },
         "laravel": {
             "providers": [
@@ -67,19 +68,20 @@
             "@clear",
             "@prepare"
         ],
-        "prepare": "@php vendor/bin/testbench package:discover --ansi",
         "clear": "@php vendor/bin/testbench package:purge-skeleton --ansi",
-        "build": "@php vendor/bin/testbench workbench:build --ansi",
+        "prepare": "@php vendor/bin/testbench package:discover --ansi",
         "lint": [
             "@php vendor/bin/phpstan analyse",
             "@php vendor/bin/pint"
         ],
         "test": "@php vendor/bin/phpunit -c ./ --color",
         "ci": [
+            "@composer audit",
             "@prepare",
             "@lint",
             "@test"
         ]
     },
+    "prefer-stable": true,
     "minimum-stability": "dev"
 }

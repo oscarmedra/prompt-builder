@@ -4,6 +4,7 @@ namespace Orchestra\Workbench\Console;
 
 use Composer\InstalledVersions;
 use Illuminate\Console\Command;
+use Illuminate\Contracts\Console\PromptsForMissingInput;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -16,16 +17,17 @@ use Orchestra\Workbench\Events\InstallStarted;
 use Orchestra\Workbench\StubRegistrar;
 use Orchestra\Workbench\Workbench;
 use Symfony\Component\Console\Attribute\AsCommand;
+use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\OutputInterface;
 
+use function Laravel\Prompts\confirm;
 use function Orchestra\Sidekick\join_paths;
 use function Orchestra\Testbench\package_path;
 
 #[AsCommand(name: 'workbench:devtool', description: 'Configure Workbench for package development')]
-class DevToolCommand extends Command
+class DevToolCommand extends Command implements PromptsForMissingInput
 {
-    use Concerns\InteractsWithFiles;
-
     /**
      * Namespace prefix for Workbench environment.
      */
@@ -45,7 +47,7 @@ class DevToolCommand extends Command
         $this->prepareWorkbenchNamespaces($filesystem, $workingPath);
         $this->prepareWorkbenchDirectories($filesystem, $workingPath);
 
-        if ($this->option('install') === true && $this->option('skip-install') === false) {
+        if ($this->option('install') === true) {
             $this->call('workbench:install', [
                 '--force' => $this->option('force'),
                 '--no-devtool' => true,
@@ -243,7 +245,7 @@ class DevToolCommand extends Command
             $content['autoload-dev']['psr-4'] = [];
         }
 
-        if ($this->components->confirm('Prefix with `Workbench` namespace?', default: true) === false) {
+        if (confirm('Prefix with `Workbench` namespace?', default: true) === false) {
             $this->workbenchNamespacePrefix = '';
         }
 
@@ -271,6 +273,26 @@ class DevToolCommand extends Command
         }
 
         return $content;
+    }
+
+    /**
+     * Prompt the user for any missing arguments.
+     *
+     * @return void
+     */
+    protected function promptForMissingArguments(InputInterface $input, OutputInterface $output)
+    {
+        $install = null;
+
+        if ($input->getOption('skip-install') === true) {
+            $install = false;
+        } elseif (\is_null($input->getOption('install'))) {
+            $install = confirm('Run Workbench installation?', true);
+        }
+
+        if (! \is_null($install)) {
+            $input->setOption('install', $install);
+        }
     }
 
     /**

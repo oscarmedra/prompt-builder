@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\ServiceProvider;
 use Orchestra\Testbench\Attributes\DefineEnvironment;
 use Orchestra\Testbench\Attributes\RequiresEnv;
 use Orchestra\Testbench\Attributes\RequiresLaravel;
@@ -111,7 +112,7 @@ trait CreatesApplication
      * Override application aliases.
      *
      * @param  \Illuminate\Foundation\Application  $app
-     * @return array<string, class-string>
+     * @return array<string, class-string|false>
      */
     protected function overrideApplicationAliases($app)
     {
@@ -128,13 +129,16 @@ trait CreatesApplication
      */
     final protected function resolveApplicationAliases($app): array
     {
-        $aliases = Collection::make(
+        $aliases = (new Collection(
             $this->getApplicationAliases($app)
-        )->merge($this->getPackageAliases($app));
+        ))->merge($this->getPackageAliases($app));
 
         if (! empty($overrides = $this->overrideApplicationAliases($app))) {
+            /** @phpstan-ignore argument.type */
             $aliases->transform(static function ($alias, $name) use ($overrides) {
-                return $overrides[$name] ?? $alias;
+                return with($overrides[$name] ?? $alias, static function ($alias) {
+                    return $alias !== false ? $alias : null;
+                });
             });
         }
 
@@ -171,14 +175,14 @@ trait CreatesApplication
      */
     protected function getApplicationProviders($app)
     {
-        return $app['config']['app.providers'];
+        return $app['config']['app.providers'] ?? ServiceProvider::defaultProviders()->toArray();
     }
 
     /**
      * Override application aliases.
      *
      * @param  \Illuminate\Foundation\Application  $app
-     * @return array<class-string, class-string>
+     * @return array<class-string, class-string|false>
      */
     protected function overrideApplicationProviders($app)
     {
@@ -195,13 +199,16 @@ trait CreatesApplication
      */
     final protected function resolveApplicationProviders($app): array
     {
-        $providers = Collection::make(
+        $providers = (new Collection(
             RegisterProviders::mergeAdditionalProvidersForTestbench($this->getApplicationProviders($app))
-        )->merge($this->getPackageProviders($app));
+        ))->merge($this->getPackageProviders($app));
 
         if (! empty($overrides = $this->overrideApplicationProviders($app))) {
-            $providers->transform(static function ($provider) use ($overrides) {
-                return $overrides[$provider] ?? $provider;
+            /** @phpstan-ignore argument.type */
+            $providers->transform(static function (string $provider) use ($overrides) {
+                return with($overrides[$provider] ?? $provider, static function ($provider) {
+                    return $provider !== false ? $provider : null;
+                });
             });
         }
 
@@ -382,9 +389,7 @@ trait CreatesApplication
 
         tap($app['config'], function ($config) use ($app) {
             if (! $app->bound('env')) {
-                $app->detectEnvironment(static function () use ($config) {
-                    return $config->get('app.env', 'workbench');
-                });
+                $app->detectEnvironment(static fn () => $config->get('app.env', 'workbench'));
             }
 
             if (\is_string($bootstrapProviderPath = $this->getApplicationBootstrapFile('providers.php'))) {
@@ -412,9 +417,7 @@ trait CreatesApplication
     protected function resolveApplicationCore($app)
     {
         if ($this->isRunningTestCase()) {
-            $app->detectEnvironment(static function () {
-                return 'testing';
-            });
+            $app->detectEnvironment(static fn () => 'testing');
         }
     }
 
@@ -459,11 +462,11 @@ trait CreatesApplication
      */
     protected function resolveApplicationBootstrappers($app)
     {
-        if ($this instanceof PHPUnitTestCase) {
-            $app->make('Orchestra\Testbench\Bootstrap\HandleExceptions', ['testbench' => $this])->bootstrap($app);
-        } else {
-            $app->make('Illuminate\Foundation\Bootstrap\HandleExceptions')->bootstrap($app);
-        }
+        $app->make(
+            $this->isRunningTestCase()
+                ? 'Orchestra\Testbench\Bootstrap\HandleExceptions'
+                : 'Illuminate\Foundation\Bootstrap\HandleExceptions'
+        )->bootstrap($app);
 
         $app->make('Illuminate\Foundation\Bootstrap\RegisterFacades')->bootstrap($app);
         $app->make('Illuminate\Foundation\Bootstrap\SetRequestForConsole')->bootstrap($app);
@@ -486,7 +489,8 @@ trait CreatesApplication
             attribute: function () use ($app) {
                 $this->parseTestMethodAttributes($app, WithImmutableDates::class); /** @phpstan-ignore method.notFound */
                 $this->parseTestMethodAttributes($app, DefineEnvironment::class); /** @phpstan-ignore method.notFound */
-            }
+            },
+            pest: fn () => $this->defineEnvironmentUsingPest($app), /** @phpstan-ignore method.notFound */
         );
 
         $this->resolveApplicationRateLimiting($app);

@@ -8,7 +8,7 @@ use Orchestra\Canvas\Core\Concerns\MigrationGenerator;
 use Symfony\Component\Console\Attribute\AsCommand;
 
 /**
- * @see https://github.com/laravel/framework/blob/9.x/src/Illuminate/Session/Console/SessionTableCommand.php
+ * @see https://github.com/laravel/framework/blob/10.x/src/Illuminate/Session/Console/SessionTableCommand.php
  */
 #[AsCommand(name: 'session:table', description: 'Create a migration for the session database table')]
 class SessionTableCommand extends \Illuminate\Session\Console\SessionTableCommand
@@ -30,13 +30,26 @@ class SessionTableCommand extends \Illuminate\Session\Console\SessionTableComman
     }
 
     /**
-     * Create a base migration file for the session.
+     * Create a base migration file for the table.
      *
+     * @param  string  $table
      * @return string
      */
     #[\Override]
-    protected function createBaseMigration()
+    protected function createBaseMigration($table)
     {
-        return $this->createBaseMigrationUsingCanvas('sessions');
+        return $this->createBaseMigrationUsingCanvas($table);
+    }
+
+    /**
+     * Determine whether a migration for the table already exists.
+     *
+     * @param  string  $table
+     * @return bool
+     */
+    #[\Override]
+    protected function migrationExists($table)
+    {
+        return $this->migrationExistsUsingCanvas($table);
     }
 }

@@ -57,7 +57,13 @@ trait HandlesRoutes
             annotation: fn () => $this->parseTestMethodAnnotations($app, 'define-route', function ($method) use ($router) {
                 $this->{$method}($router);
             }),
-            attribute: fn () => $this->parseTestMethodAttributes($app, DefineRoute::class)
+            attribute: fn () => $this->parseTestMethodAttributes($app, DefineRoute::class),
+            pest: function () use ($router) {
+                $this->defineRoutesUsingPest($router); // @phpstan-ignore method.notFound
+
+                $router->middleware('web')
+                    ->group(fn ($router) => $this->defineWebRoutesUsingPest($router)); /** @phpstan-ignore method.notFound */
+            }
         );
 
         refresh_router_lookups($router);
@@ -120,7 +126,9 @@ trait HandlesRoutes
         $time = time();
 
         $basePath = static::applicationBasePath();
-        $bootstrapPath = join_paths($basePath, 'bootstrap');
+        $bootstrapPath = $files->isDirectory(join_paths($basePath, '.laravel'))
+            ? join_paths($basePath, '.laravel')
+            : join_paths($basePath, 'bootstrap');
 
         if ($route instanceof Closure) {
             $cached = false;

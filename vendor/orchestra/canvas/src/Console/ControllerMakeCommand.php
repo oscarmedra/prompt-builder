@@ -9,7 +9,7 @@ use Orchestra\Canvas\Core\Concerns\UsesGeneratorOverrides;
 use Symfony\Component\Console\Attribute\AsCommand;
 
 /**
- * @see https://github.com/laravel/framework/blob/9.x/src/Illuminate/Routing/Console/ControllerMakeCommand.php
+ * @see https://github.com/laravel/framework/blob/10.x/src/Illuminate/Routing/Console/ControllerMakeCommand.php
  */
 #[AsCommand(name: 'make:controller', description: 'Create a new controller class')]
 class ControllerMakeCommand extends \Illuminate\Routing\Console\ControllerMakeCommand
@@ -40,6 +40,7 @@ class ControllerMakeCommand extends \Illuminate\Routing\Console\ControllerMakeCo
     #[\Override]
     public function handle()
     {
+        /** @phpstan-ignore return.type */
         return $this->generateCode() ? self::SUCCESS : self::FAILURE;
     }
 
@@ -63,6 +64,7 @@ class ControllerMakeCommand extends \Illuminate\Routing\Console\ControllerMakeCo
     #[\Override]
     protected function buildParentReplacements()
     {
+        /** @phpstan-ignore argument.type */
         $parentModelClass = $this->parseModel($this->option('parent'));
 
         if (! class_exists($parentModelClass) &&
@@ -92,6 +94,7 @@ class ControllerMakeCommand extends \Illuminate\Routing\Console\ControllerMakeCo
     #[\Override]
     protected function buildModelReplacements(array $replace)
     {
+        /** @phpstan-ignore argument.type */
         $modelClass = $this->parseModel($this->option('model'));
 
         if (! class_exists($modelClass) && $this->components->confirm("A {$modelClass} model does not exist. Do you want to generate it?", true)) {
@@ -99,6 +102,12 @@ class ControllerMakeCommand extends \Illuminate\Routing\Console\ControllerMakeCo
         }
 
         $replace = $this->buildFormRequestReplacements($replace, $modelClass);
+
+        if ($this->option('requests')) {
+            $namespace = $this->rootNamespace();
+            $replace['{{ namespacedRequests }}'] = str_replace('App\\', $namespace, $replace['{{ namespacedRequests }}']);
+            $replace['{{namespacedRequests}}'] = str_replace('App\\', $namespace, $replace['{{namespacedRequests}}']);
+        }
 
         return array_merge($replace, [
             'DummyFullModelClass' => $modelClass,
@@ -134,5 +143,44 @@ class ControllerMakeCommand extends \Illuminate\Routing\Console\ControllerMakeCo
     protected function rootNamespace()
     {
         return $this->rootNamespaceUsingCanvas();
+    }
+
+    /**
+     * Get a list of possible model names.
+     *
+     * @return array<int, string>
+     */
+    #[\Override]
+    protected function possibleModels()
+    {
+        return $this->possibleModelsUsingCanvas();
+    }
+
+    /**
+     * Generate the form requests for the given model and classes.
+     *
+     * @param  string  $modelClass
+     * @param  string  $storeRequestClass
+     * @param  string  $updateRequestClass
+     * @return array
+     */
+    #[\Override]
+    protected function generateFormRequests($modelClass, $storeRequestClass, $updateRequestClass)
+    {
+        $storeRequestClass = 'Store'.class_basename($modelClass).'Request';
+
+        $this->call('make:request', [
+            'name' => $storeRequestClass,
+            '--preset' => $this->option('preset'),
+        ]);
+
+        $updateRequestClass = 'Update'.class_basename($modelClass).'Request';
+
+        $this->call('make:request', [
+            'name' => $updateRequestClass,
+            '--preset' => $this->option('preset'),
+        ]);
+
+        return [$storeRequestClass, $updateRequestClass];
     }
 }

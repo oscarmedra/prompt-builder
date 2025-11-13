@@ -11,19 +11,24 @@ class DriverFactory
      */
     public function make(string $model): DriverInterface
     {
+        // $config = config('prompt-models');
+
+        $config = require('src/config/prompt-drivers.php');
+        $drivers = $config['drivers'];
+
         switch ($model) {
             case 'chatgpt':
-                return new ChatGPTDriver(config('services.openai.api_key')); // Exemple avec la clé API dans config
+                return new ChatGPTDriver($drivers('chatgpt')); // Exemple avec la clé API dans config
             case 'bing':
                 // return new BingDriver(config('services.bing.api_key'));
             case 'bard':
                 // return new BardDriver(config('services.bard.api_key'));
             case 'deepseek':
                 // Crée et retourne l'instance pour DeepSeek
-                return new DeepSeekDriver(config('services.deepseek.api_key'));
+                return new DeepSeekDriver($drivers('deepseek'));
             case 'ollama':
                 // Crée et retourne l'instance pour DeepSeek
-                return new OllamaDriver();
+                // return new OllamaDriver($drivers['ollama']);
             default:
                 throw new InvalidArgumentException("Modèle non supporté: {$model}");
         }

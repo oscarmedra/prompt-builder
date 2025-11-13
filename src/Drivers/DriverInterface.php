@@ -2,7 +2,9 @@
 
 namespace NoahMedra\PromptBuilder\Drivers;
 
+use NoahMedra\PromptBuilder\BuilderInput;
+
 interface DriverInterface
 {
-    public function sendPrompt(string $prompt, array $parameters = []): string;
+    public function process(BuilderInput $input);
 }

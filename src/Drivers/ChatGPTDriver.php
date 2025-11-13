@@ -8,16 +8,16 @@ class ChatGPTDriver implements DriverInterface
 {
 
 
+    protected array $config;
     protected string $apiKey;
     protected string $apiUrl;
 
-    public function __construct(?string $apiKey)
+    public function __construct(array $config)
     {
-        $this->apiKey = $apiKey ?? $this->apiKey = config('prompt-builder.drivers.chatgpt.api_key');
-        $this->apiUrl = 'https://api.openai.com/v1/completions'; // URL de l'API OpenAI
+        $this->apiKey = $config['api_key'];
+        $this->apiUrl = $config['base_url']; // URL de l'API OpenAI
     }
     
-
 
     public function sendPrompt(string $prompt, array $parameters = []): string
     {
@@ -36,8 +36,7 @@ class ChatGPTDriver implements DriverInterface
     }
 
 
-
-    protected function callAPI(array $data)
+    public function callAPI(array $data) : array
     {
         // Exemple de fonction pour appeler l'API avec cURL
         $ch = curl_init();

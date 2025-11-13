@@ -14,6 +14,7 @@ use Throwable;
 trait ApplicationTestingHooks
 {
     use InteractsWithMockery;
+    use InteractsWithPest;
     use InteractsWithPHPUnit;
     use InteractsWithTestCase;
 
@@ -142,7 +143,7 @@ trait ApplicationTestingHooks
      */
     protected function setUpParallelTestingCallbacks(): void
     {
-        if (class_exists(ParallelTesting::class) && $this instanceof PHPUnitTestCase) {
+        if ($this instanceof PHPUnitTestCase) {
             /** @phpstan-ignore staticMethod.notFound, argument.type */
             ParallelTesting::callSetUpTestCaseCallbacks($this);
         }
@@ -153,7 +154,7 @@ trait ApplicationTestingHooks
      */
     protected function tearDownParallelTestingCallbacks(): void
     {
-        if (class_exists(ParallelTesting::class) && $this instanceof PHPUnitTestCase) {
+        if ($this instanceof PHPUnitTestCase) {
             /** @phpstan-ignore staticMethod.notFound, argument.type */
             ParallelTesting::callTearDownTestCaseCallbacks($this);
         }

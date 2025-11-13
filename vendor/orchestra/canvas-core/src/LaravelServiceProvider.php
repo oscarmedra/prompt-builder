@@ -8,11 +8,9 @@ use Illuminate\Support\ServiceProvider;
 class LaravelServiceProvider extends ServiceProvider implements DeferrableProvider
 {
     /**
-     * Register the service provider.
-     *
-     * @return void
+     * Register services.
      */
-    public function register()
+    public function register(): void
     {
         $this->app->singleton(PresetManager::class, fn ($app) => new PresetManager($app));
     }
@@ -22,7 +20,7 @@ class LaravelServiceProvider extends ServiceProvider implements DeferrableProvid
      *
      * @return array<int, class-string>
      */
-    public function provides()
+    public function provides(): array
     {
         return [
             PresetManager::class,

@@ -44,14 +44,22 @@ trait HandlesDatabases
                 $this->beforeApplicationDestroyed(fn () => $this->destroyDatabaseMigrations());
             },
             annotation: fn () => $this->parseTestMethodAnnotations($app, 'define-db'),
-            attribute: fn () => $this->parseTestMethodAttributes($app, DefineDatabase::class)
+            attribute: fn () => $this->parseTestMethodAttributes($app, DefineDatabase::class),
+            pest: function () {
+                $this->defineDatabaseMigrationsUsingPest(); /** @phpstan-ignore method.notFound */
+                $this->beforeApplicationDestroyed(fn () => $this->destroyDatabaseMigrationsUsingPest()); /** @phpstan-ignore method.notFound */
+            },
         )->get('attribute');
 
         $callback();
 
         $attributeCallbacks->handle();
 
-        $this->defineDatabaseSeeders();
+        TestingFeature::run(
+            testCase: $this,
+            default: fn () => $this->defineDatabaseSeeders(),
+            pest: fn () => $this->defineDatabaseSeedersUsingPest(), /** @phpstan-ignore method.notFound */
+        );
     }
 
     /**

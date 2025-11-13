@@ -6,11 +6,12 @@ class DeepSeekDriver implements DriverInterface
 {
     protected string $apiKey;
     protected string $apiUrl;
+    protected array $config;
 
-    public function __construct(string $apiKey)
+    public function __construct(array $config)
     {
-        $this->apiKey = $apiKey;
-        $this->apiUrl = 'https://api.deepseek.com/v1/query'; // URL de l'API DeepSeek (à ajuster)
+        $this->apiKey = $config['api_key'];
+        $this->apiUrl = $config['endpoint']; // URL de l'API DeepSeek (à ajuster)
     }
 
     public function sendPrompt(string $prompt, array $parameters = []): string
@@ -29,7 +30,8 @@ class DeepSeekDriver implements DriverInterface
         return $response['result'] ?? 'Pas de réponse';
     }
 
-    protected function callAPI(array $data)
+
+    public function callAPI(array $data)
     {
         // Fonction pour envoyer une requête à l'API DeepSeek avec cURL
         $ch = curl_init();

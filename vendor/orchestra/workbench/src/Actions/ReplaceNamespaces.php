@@ -61,9 +61,6 @@ class ReplaceNamespaces
             'Orchestra\Testbench\Factories\UserFactory' => $userFactory,
         ];
 
-        $this->filesystem->put(
-            $filename,
-            str_replace(array_keys($keywords), array_values($keywords), $this->filesystem->get($filename))
-        );
+        $this->filesystem->replaceInFile(array_keys($keywords), array_values($keywords), $filename);
     }
 }

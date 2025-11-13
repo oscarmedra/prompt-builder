@@ -8,7 +8,7 @@ use Orchestra\Canvas\Core\Concerns\UsesGeneratorOverrides;
 use Symfony\Component\Console\Attribute\AsCommand;
 
 /**
- * @see https://github.com/laravel/framework/blob/9.x/src/Illuminate/Foundation/Console/ResourceMakeCommand.php
+ * @see https://github.com/laravel/framework/blob/10.x/src/Illuminate/Foundation/Console/ResourceMakeCommand.php
  */
 #[AsCommand(name: 'make:resource', description: 'Create a new resource')]
 class ResourceMakeCommand extends \Illuminate\Foundation\Console\ResourceMakeCommand
@@ -38,6 +38,7 @@ class ResourceMakeCommand extends \Illuminate\Foundation\Console\ResourceMakeCom
     #[\Override]
     public function handle()
     {
+        /** @phpstan-ignore return.type */
         return $this->generateCode() ? self::SUCCESS : self::FAILURE;
     }
 

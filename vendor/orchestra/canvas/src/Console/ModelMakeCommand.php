@@ -10,7 +10,7 @@ use Orchestra\Canvas\Core\Concerns\UsesGeneratorOverrides;
 use Symfony\Component\Console\Attribute\AsCommand;
 
 /**
- * @see https://github.com/laravel/framework/blob/9.x/src/Illuminate/Foundation/Console/ModelMakeCommand.php
+ * @see https://github.com/laravel/framework/blob/10.x/src/Illuminate/Foundation/Console/ModelMakeCommand.php
  */
 #[AsCommand(name: 'make:model', description: 'Create a new Eloquent model class')]
 class ModelMakeCommand extends \Illuminate\Foundation\Console\ModelMakeCommand
@@ -41,6 +41,7 @@ class ModelMakeCommand extends \Illuminate\Foundation\Console\ModelMakeCommand
     #[\Override]
     public function handle()
     {
+        /** @phpstan-ignore return.type */
         return $this->generateCode() ? self::SUCCESS : self::FAILURE;
     }
 
@@ -92,6 +93,7 @@ class ModelMakeCommand extends \Illuminate\Foundation\Console\ModelMakeCommand
         $this->call('make:factory', [
             'name' => "{$factory}Factory",
             '--model' => $this->qualifyClass($this->getNameInput()),
+            '--preset' => $this->option('preset'),
         ]);
     }
 

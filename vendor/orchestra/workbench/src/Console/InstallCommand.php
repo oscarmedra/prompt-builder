@@ -4,6 +4,7 @@ namespace Orchestra\Workbench\Console;
 
 use Composer\InstalledVersions;
 use Illuminate\Console\Command;
+use Illuminate\Contracts\Console\PromptsForMissingInput;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Collection;
 use Orchestra\Testbench\Foundation\Console\Actions\GeneratesFile;
@@ -14,14 +15,14 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
+use function Laravel\Prompts\confirm;
+use function Laravel\Prompts\select;
 use function Orchestra\Sidekick\join_paths;
 use function Orchestra\Testbench\package_path;
 
 #[AsCommand(name: 'workbench:install', description: 'Setup Workbench for package development')]
-class InstallCommand extends Command
+class InstallCommand extends Command implements PromptsForMissingInput
 {
-    use Concerns\InteractsWithFiles;
-
     /**
      * The `testbench.yaml` default configuration file.
      */
@@ -108,6 +109,7 @@ class InstallCommand extends Command
             return;
         }
 
+        /** @var \Illuminate\Support\Collection<int, string> $choices */
         $choices = Collection::make($this->environmentFiles())
             ->reject(static fn ($file) => $filesystem->isFile(join_paths($workbenchWorkingPath, $file)))
             ->values();
@@ -122,9 +124,9 @@ class InstallCommand extends Command
 
         /** @var string|null $targetEnvironmentFile */
         $targetEnvironmentFile = $this->input->isInteractive()
-            ? $this->components->choice(
+            ? select(
                 "Export '.env' file as?",
-                $choices->prepend('Skip exporting .env')->all()
+                $choices->prepend('Skip exporting .env'), // @phpstan-ignore argument.type
             ) : null;
 
         if (\in_array($targetEnvironmentFile, [null, 'Skip exporting .env'])) {
@@ -164,7 +166,7 @@ class InstallCommand extends Command
             return;
         }
 
-        $this->replaceInFile($filesystem, ["laravel: '@testbench'"], ["laravel: '@testbench-dusk'"], join_paths($workingPath, 'testbench.yaml'));
+        $filesystem->replaceInFile(["laravel: '@testbench'"], ["laravel: '@testbench-dusk'"], join_paths($workingPath, 'testbench.yaml'));
     }
 
     /**
@@ -202,6 +204,26 @@ class InstallCommand extends Command
             '.env.example',
             '.env.dist',
         ];
+    }
+
+    /**
+     * Prompt the user for any missing arguments.
+     *
+     * @return void
+     */
+    protected function promptForMissingArguments(InputInterface $input, OutputInterface $output)
+    {
+        $devtool = null;
+
+        if ($input->getOption('skip-devtool') === true) {
+            $devtool = false;
+        } elseif (\is_null($input->getOption('devtool'))) {
+            $devtool = confirm('Run Workbench DevTool installation?', true);
+        }
+
+        if (! \is_null($devtool)) {
+            $input->setOption('devtool', $devtool);
+        }
     }
 
     /**

@@ -8,7 +8,7 @@ use Orchestra\Canvas\Core\Concerns\UsesGeneratorOverrides;
 use Symfony\Component\Console\Attribute\AsCommand;
 
 /**
- * @see https://github.com/laravel/framework/blob/9.x/src/Illuminate/Foundation/Console/PolicyMakeCommand.php
+ * @see https://github.com/laravel/framework/blob/10.x/src/Illuminate/Foundation/Console/PolicyMakeCommand.php
  */
 #[AsCommand(name: 'make:policy', description: 'Create a new policy class')]
 class PolicyMakeCommand extends \Illuminate\Foundation\Console\PolicyMakeCommand
@@ -38,6 +38,7 @@ class PolicyMakeCommand extends \Illuminate\Foundation\Console\PolicyMakeCommand
     #[\Override]
     public function handle()
     {
+        /** @phpstan-ignore return.type */
         return $this->generateCode() ? self::SUCCESS : self::FAILURE;
     }
 
@@ -88,5 +89,16 @@ class PolicyMakeCommand extends \Illuminate\Foundation\Console\PolicyMakeCommand
         $guard = $this->option('guard');
 
         return $this->userProviderModelUsingCanvas($guard);
+    }
+
+    /**
+     * Get a list of possible model names.
+     *
+     * @return array<int, string>
+     */
+    #[\Override]
+    protected function possibleModels()
+    {
+        return $this->possibleModelsUsingCanvas();
     }
 }

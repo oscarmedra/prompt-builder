@@ -24,6 +24,7 @@ final class Kernel extends ConsoleKernel
      *
      * @return void
      */
+    #[\Override]
     protected function commands()
     {
         if (is_file($console = base_path(join_paths('routes', 'console.php')))) {
@@ -39,6 +40,7 @@ final class Kernel extends ConsoleKernel
      *
      * @throws \Throwable
      */
+    #[\Override]
     protected function reportException(Throwable $e)
     {
         throw $e;

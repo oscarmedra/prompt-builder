@@ -9,9 +9,9 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use Orchestra\Sidekick\Env;
 use Orchestra\Testbench\Contracts\Config as ConfigContract;
 use Orchestra\Testbench\Foundation\Config;
-use Orchestra\Testbench\Foundation\Env;
 use ReflectionClass;
 use Symfony\Component\Finder\Finder;
 
@@ -74,7 +74,7 @@ class Workbench
     {
         $app->singleton(ConfigContract::class, static fn () => $config);
 
-        Collection::make($providers)
+        (new Collection($providers))
             ->filter(static fn ($provider) => ! empty($provider) && class_exists($provider))
             ->each(static function ($provider) use ($app) {
                 $app->register($provider);
@@ -97,7 +97,7 @@ class Workbench
         $hasAuthentication = $config->getWorkbenchAttributes()['auth'] ?? false;
 
         static::start($app, $config, array_filter([
-            $hasAuthentication === true && class_exists('Orchestra\Workbench\AuthServiceProvider') ? 'Orchestra\Workbench\AuthServiceProvider' : null,
+            $hasAuthentication === true ? 'Orchestra\Workbench\AuthServiceProvider' : null,
             'Orchestra\Workbench\WorkbenchServiceProvider',
         ]));
     }
@@ -114,7 +114,7 @@ class Workbench
         /** @var TWorkbenchDiscoversConfig $discoversConfig */
         $discoversConfig = $config->getWorkbenchDiscoversAttributes();
 
-        $app->booted(function ($app) use ($discoversConfig) {
+        $app->booted(static function ($app) use ($discoversConfig) {
             tap($app->make('router'), static function (Router $router) use ($discoversConfig) {
                 foreach (['web', 'api'] as $group) {
                     if (($discoversConfig[$group] ?? false) === true) {
@@ -132,10 +132,10 @@ class Workbench
 
         after_resolving($app, 'translator', static function ($translator) {
             /** @var \Illuminate\Contracts\Translation\Loader $translator */
-            $path = Collection::make([
+            $path = (new Collection([
                 workbench_path('lang'),
                 workbench_path('resources', 'lang'),
-            ])->filter(static fn ($path) => is_dir($path))
+            ]))->filter(static fn ($path) => is_dir($path))
                 ->first();
 
             if (\is_null($path)) {
@@ -257,11 +257,7 @@ class Workbench
      */
     public static function configuration(): ConfigContract
     {
-        if (\is_null(static::$cachedConfiguration)) {
-            static::$cachedConfiguration = Config::cacheFromYaml(package_path());
-        }
-
-        return static::$cachedConfiguration;
+        return static::$cachedConfiguration ??= Config::cacheFromYaml(package_path());
     }
 
     /**
@@ -319,13 +315,16 @@ class Workbench
      */
     public static function applicationUserModel(): ?string
     {
-        if (! isset(static::$cachedUserModel)) {
-            static::$cachedUserModel = match (true) {
+        if (\is_null(static::$cachedUserModel)) {
+            /** @var class-string<\Illuminate\Foundation\Auth\User>|false $userModel */
+            $userModel = match (true) {
                 Env::has('AUTH_MODEL') => Env::get('AUTH_MODEL'),
                 is_file(workbench_path('app', 'Models', 'User.php')) => \sprintf('%sModels\User', static::detectNamespace('app')),
                 is_file(base_path(join_paths('Models', 'User.php'))) => 'App\Models\User',
                 default => false,
             };
+
+            static::$cachedUserModel = $userModel;
         }
 
         return static::$cachedUserModel != false ? static::$cachedUserModel : null;

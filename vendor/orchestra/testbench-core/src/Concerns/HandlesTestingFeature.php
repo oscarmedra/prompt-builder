@@ -16,6 +16,7 @@ trait HandlesTestingFeature
      * @param  (\Closure():(void))|null  $default
      * @param  (\Closure():(void))|null  $annotation
      * @param  (\Closure():(mixed))|null  $attribute
+     * @param  (\Closure(\Closure|null):(mixed))|null  $pest
      * @return \Illuminate\Support\Fluent
      *
      * @deprecated
@@ -25,13 +26,15 @@ trait HandlesTestingFeature
     protected function resolveTestbenchTestingFeature(
         ?Closure $default = null,
         ?Closure $annotation = null,
-        ?Closure $attribute = null
+        ?Closure $attribute = null,
+        ?Closure $pest = null
     ) {
         return TestingFeature::run(
             testCase: $this,
             default: $default,
             annotation: $annotation,
             attribute: $attribute,
+            pest: $pest
         );
     }
 }

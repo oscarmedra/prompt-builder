@@ -49,9 +49,9 @@ class LoadConfigurationWithWorkbench extends LoadConfiguration
     #[\Override]
     protected function resolveConfigurationFile(string $path, string $key): string
     {
-        return $this->usesWorkbenchConfigFile === true && is_file(workbench_path('config', "{$key}.php"))
-            ? workbench_path('config', "{$key}.php")
-            : $path;
+        $config = workbench_path('config', "{$key}.php");
+
+        return $this->usesWorkbenchConfigFile === true && is_file($config) ? $config : $path;
     }
 
     /** {@inheritDoc} */
@@ -62,7 +62,7 @@ class LoadConfigurationWithWorkbench extends LoadConfiguration
             return $configurations;
         }
 
-        LazyCollection::make(function () {
+        (new LazyCollection(function () {
             $path = workbench_path('config');
 
             foreach (Finder::create()->files()->name('*.php')->in($path) as $file) {
@@ -70,7 +70,7 @@ class LoadConfigurationWithWorkbench extends LoadConfiguration
 
                 yield $directory.basename($file->getRealPath(), '.php') => $file->getRealPath();
             }
-        })->reject(static fn ($path, $key) => $configurations->has($key))
+        }))->reject(static fn ($path, $key) => $configurations->has($key))
             ->each(static function ($path, $key) use ($configurations) {
                 $configurations->put($key, $path);
             });

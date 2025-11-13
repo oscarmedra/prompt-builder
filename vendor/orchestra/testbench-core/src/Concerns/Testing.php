@@ -2,6 +2,7 @@
 
 namespace Orchestra\Testbench\Concerns;
 
+use Closure;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Foundation\Testing\DatabaseTruncation;
@@ -10,6 +11,10 @@ use Illuminate\Foundation\Testing\WithFaker;
 use Illuminate\Foundation\Testing\WithoutEvents;
 use Illuminate\Foundation\Testing\WithoutMiddleware;
 use Illuminate\Support\LazyCollection;
+use Orchestra\Testbench\Pest\WithPest;
+use PHPUnit\Framework\TestCase as PHPUnitTestCase;
+
+use function Orchestra\Sidekick\once;
 
 /**
  * @api
@@ -35,9 +40,22 @@ trait Testing
      */
     final protected function setUpTheTestEnvironment(): void
     {
-        $this->setUpTheApplicationTestingHooks(function () {
-            $this->setUpTraits();
+        $setUp = once(function () {
+            $this->setUpTheApplicationTestingHooks(function () {
+                $this->setUpTraits();
+            });
         });
+
+        /** @phpstan-ignore class.notFound */
+        if ($this instanceof PHPUnitTestCase && static::usesTestingConcern(WithPest::class)) {
+            $this->setUpTheEnvironmentUsingPest(); /** @phpstan-ignore method.notFound */
+        }
+
+        if ($this->testCaseSetUpCallback instanceof Closure) {
+            value($this->testCaseSetUpCallback, $setUp);
+        }
+
+        value($setUp);
     }
 
     /**
@@ -49,23 +67,39 @@ trait Testing
      */
     final protected function tearDownTheTestEnvironment(): void
     {
-        $this->tearDownTheApplicationTestingHooks(function () {
-            if (property_exists($this, 'serverVariables')) {
-                $this->serverVariables = [];
-            }
+        $tearDown = once(function () {
+            $this->tearDownTheApplicationTestingHooks(function () {
+                if (property_exists($this, 'serverVariables')) {
+                    $this->serverVariables = [];
+                }
 
-            if (property_exists($this, 'defaultHeaders')) {
-                $this->defaultHeaders = [];
-            }
+                if (property_exists($this, 'defaultHeaders')) {
+                    $this->defaultHeaders = [];
+                }
 
-            if (property_exists($this, 'originalExceptionHandler')) {
-                $this->originalExceptionHandler = null;
-            }
+                if (property_exists($this, 'originalExceptionHandler')) {
+                    $this->originalExceptionHandler = null;
+                }
 
-            if (property_exists($this, 'originalDeprecationHandler')) {
-                $this->originalDeprecationHandler = null;
-            }
+                if (property_exists($this, 'originalDeprecationHandler')) {
+                    $this->originalDeprecationHandler = null;
+                }
+            });
         });
+
+        /** @phpstan-ignore class.notFound */
+        if ($this instanceof PHPUnitTestCase && static::usesTestingConcern(WithPest::class)) {
+            $this->tearDownTheEnvironmentUsingPest(); /** @phpstan-ignore method.notFound */
+        }
+
+        if ($this->testCaseTearDownCallback instanceof Closure) {
+            value($this->testCaseTearDownCallback, $tearDown);
+        }
+
+        value($tearDown);
+
+        $this->testCaseSetUpCallback = null;
+        $this->testCaseTearDownCallback = null;
     }
 
     /**
@@ -79,12 +113,12 @@ trait Testing
     final protected function setUpTheTestEnvironmentTraits(array $uses): array
     {
         if (isset($uses[WithWorkbench::class])) {
-            $this->setUpWithWorkbench();  /** @phpstan-ignore method.notFound */
+            $this->setUpWithWorkbench(); /** @phpstan-ignore method.notFound */
         }
 
         $this->setUpDatabaseRequirements(function () use ($uses) {
             if (isset($uses[RefreshDatabase::class])) {
-                $this->refreshDatabase();  /** @phpstan-ignore method.notFound */
+                $this->refreshDatabase(); /** @phpstan-ignore method.notFound */
             }
 
             if (isset($uses[DatabaseMigrations::class])) {
@@ -112,11 +146,11 @@ trait Testing
             $this->setUpFaker(); /** @phpstan-ignore method.notFound */
         }
 
-        LazyCollection::make(static function () use ($uses) {
+        (new LazyCollection(static function () use ($uses) {
             foreach ($uses as $use) {
                 yield $use;
             }
-        })
+        }))
             ->reject(function ($use) {
                 /** @var class-string $use */
                 return $this->setUpTheTestEnvironmentTraitToBeIgnored($use);

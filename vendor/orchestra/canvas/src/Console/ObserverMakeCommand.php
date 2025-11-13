@@ -8,7 +8,7 @@ use Orchestra\Canvas\Core\Concerns\UsesGeneratorOverrides;
 use Symfony\Component\Console\Attribute\AsCommand;
 
 /**
- * @see https://github.com/laravel/framework/blob/9.x/src/Illuminate/Foundation/Console/ObserverMakeCommand.php
+ * @see https://github.com/laravel/framework/blob/10.x/src/Illuminate/Foundation/Console/ObserverMakeCommand.php
  */
 #[AsCommand(name: 'make:observer', description: 'Create a new observer class')]
 class ObserverMakeCommand extends \Illuminate\Foundation\Console\ObserverMakeCommand
@@ -38,6 +38,7 @@ class ObserverMakeCommand extends \Illuminate\Foundation\Console\ObserverMakeCom
     #[\Override]
     public function handle()
     {
+        /** @phpstan-ignore return.type */
         return $this->generateCode() ? self::SUCCESS : self::FAILURE;
     }
 
@@ -74,5 +75,16 @@ class ObserverMakeCommand extends \Illuminate\Foundation\Console\ObserverMakeCom
     protected function rootNamespace()
     {
         return $this->rootNamespaceUsingCanvas();
+    }
+
+    /**
+     * Get a list of possible model names.
+     *
+     * @return array<int, string>
+     */
+    #[\Override]
+    protected function possibleModels()
+    {
+        return $this->possibleModelsUsingCanvas();
     }
 }

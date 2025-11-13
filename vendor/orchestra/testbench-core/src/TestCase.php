@@ -3,7 +3,6 @@
 namespace Orchestra\Testbench;
 
 use Illuminate\Foundation\Testing;
-use Throwable;
 
 abstract class TestCase extends PHPUnit\TestCase implements Contracts\TestCase
 {
@@ -105,6 +104,7 @@ abstract class TestCase extends PHPUnit\TestCase implements Contracts\TestCase
             Concerns\HandlesAnnotations::class,
             Concerns\HandlesDatabases::class,
             Concerns\HandlesRoutes::class,
+            Concerns\InteractsWithPest::class,
             Concerns\InteractsWithPHPUnit::class,
             Concerns\InteractsWithTestCase::class,
             Concerns\InteractsWithWorkbench::class,
@@ -131,9 +131,16 @@ abstract class TestCase extends PHPUnit\TestCase implements Contracts\TestCase
      *
      * @codeCoverageIgnore
      */
+    #[\Override]
     public static function setUpBeforeClass(): void
     {
         static::setUpBeforeClassUsingPHPUnit();
+
+        /** @phpstan-ignore class.notFound */
+        if (static::usesTestingConcern(Pest\WithPest::class)) {
+            static::setUpBeforeClassUsingPest(); /** @phpstan-ignore staticMethod.notFound */
+        }
+
         static::setUpBeforeClassUsingTestCase();
         static::setUpBeforeClassUsingWorkbench();
     }
@@ -145,25 +152,17 @@ abstract class TestCase extends PHPUnit\TestCase implements Contracts\TestCase
      *
      * @codeCoverageIgnore
      */
+    #[\Override]
     public static function tearDownAfterClass(): void
     {
         static::tearDownAfterClassUsingWorkbench();
         static::tearDownAfterClassUsingTestCase();
-        static::tearDownAfterClassUsingPHPUnit();
-    }
 
-    /**
-     * {@inheritDoc}
-     *
-     * @codeCoverageIgnore
-     */
-    #[\Override]
-    protected function onNotSuccessfulTest(Throwable $exception): void
-    {
-        parent::onNotSuccessfulTest(
-            ! \is_null(static::$latestResponse)
-                ? static::$latestResponse->transformNotSuccessfulException($exception)
-                : $exception
-        );
+        /** @phpstan-ignore class.notFound */
+        if (static::usesTestingConcern(Pest\WithPest::class)) {
+            static::tearDownAfterClassUsingPest(); /** @phpstan-ignore staticMethod.notFound */
+        }
+
+        static::tearDownAfterClassUsingPHPUnit();
     }
 }

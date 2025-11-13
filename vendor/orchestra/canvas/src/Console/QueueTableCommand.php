@@ -9,7 +9,7 @@ use Orchestra\Canvas\Core\Concerns\MigrationGenerator;
 use Symfony\Component\Console\Attribute\AsCommand;
 
 /**
- * @see https://github.com/laravel/framework/blob/9.x/src/Illuminate/Queue/Console/BatchesTableCommand.php
+ * @see https://github.com/laravel/framework/blob/10.x/src/Illuminate/Queue/Console/TableCommand.php
  */
 #[AsCommand(name: 'queue:table', description: 'Create a migration for the queue jobs database table')]
 class QueueTableCommand extends TableCommand
@@ -37,8 +37,20 @@ class QueueTableCommand extends TableCommand
      * @return string
      */
     #[\Override]
-    protected function createBaseMigration($table = 'jobs')
+    protected function createBaseMigration($table)
     {
         return $this->createBaseMigrationUsingCanvas($table);
+    }
+
+    /**
+     * Determine whether a migration for the table already exists.
+     *
+     * @param  string  $table
+     * @return bool
+     */
+    #[\Override]
+    protected function migrationExists($table)
+    {
+        return $this->migrationExistsUsingCanvas($table);
     }
 }

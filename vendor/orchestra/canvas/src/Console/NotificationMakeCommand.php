@@ -9,7 +9,7 @@ use Orchestra\Canvas\Core\Concerns\UsesGeneratorOverrides;
 use Symfony\Component\Console\Attribute\AsCommand;
 
 /**
- * @see https://github.com/laravel/framework/blob/9.x/src/Illuminate/Foundation/Console/NotificationMakeCommand.php
+ * @see https://github.com/laravel/framework/blob/10.x/src/Illuminate/Foundation/Console/NotificationMakeCommand.php
  */
 #[AsCommand(name: 'make:notification', description: 'Create a new notification class')]
 class NotificationMakeCommand extends \Illuminate\Foundation\Console\NotificationMakeCommand
@@ -40,6 +40,7 @@ class NotificationMakeCommand extends \Illuminate\Foundation\Console\Notificatio
     #[\Override]
     public function handle()
     {
+        /** @phpstan-ignore return.type */
         return $this->generateCode() ? self::SUCCESS : self::FAILURE;
     }
 

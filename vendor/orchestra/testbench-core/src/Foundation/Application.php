@@ -5,18 +5,27 @@ namespace Orchestra\Testbench\Foundation;
 use Illuminate\Console\Application as Artisan;
 use Illuminate\Console\Scheduling\ScheduleListCommand;
 use Illuminate\Console\Signals;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Builder as SchemaBuilder;
-use Illuminate\Foundation\Bootstrap\HandleExceptions;
 use Illuminate\Foundation\Bootstrap\LoadEnvironmentVariables;
+use Illuminate\Foundation\Console\AboutCommand;
+use Illuminate\Foundation\Console\ChannelListCommand;
 use Illuminate\Foundation\Console\RouteListCommand;
+use Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull;
+use Illuminate\Foundation\Http\Middleware\TrimStrings;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Queue\Queue;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Sleep;
+use Illuminate\Support\Str;
 use Illuminate\View\Component;
+use Orchestra\Testbench\Bootstrap\HandleExceptions;
 use Orchestra\Testbench\Bootstrap\RegisterProviders;
 use Orchestra\Testbench\Concerns\CreatesApplication;
 use Orchestra\Testbench\Contracts\Config as ConfigContract;
 use Orchestra\Testbench\Workbench\Workbench;
+
+use function Orchestra\Sidekick\join_paths;
 
 /**
  * @api
@@ -97,9 +106,10 @@ class Application
      * @param  string|null  $basePath
      * @param  (callable(\Illuminate\Foundation\Application):(void))|null  $resolvingCallback
      * @param  array<string, mixed>  $options
-     * @return static
      *
      * @phpstan-param TConfig  $options
+     *
+     * @return static
      */
     public static function make(?string $basePath = null, ?callable $resolvingCallback = null, array $options = [])
     {
@@ -112,9 +122,10 @@ class Application
      * @param  \Orchestra\Testbench\Contracts\Config  $config
      * @param  (callable(\Illuminate\Foundation\Application):(void))|null  $resolvingCallback
      * @param  array<string, mixed>  $options
-     * @return static
      *
      * @phpstan-param TConfig  $options
+     *
+     * @return static
      */
     public static function makeFromConfig(ConfigContract $config, ?callable $resolvingCallback = null, array $options = [])
     {
@@ -167,9 +178,10 @@ class Application
      * @param  string|null  $basePath
      * @param  (callable(\Illuminate\Foundation\Application):(void))|null  $resolvingCallback
      * @param  array<string, mixed>  $options
-     * @return \Illuminate\Foundation\Application
      *
      * @phpstan-param TConfig  $options
+     *
+     * @return \Illuminate\Foundation\Application
      */
     public static function create(?string $basePath = null, ?callable $resolvingCallback = null, array $options = [])
     {
@@ -182,9 +194,10 @@ class Application
      * @param  \Orchestra\Testbench\Contracts\Config  $config
      * @param  (callable(\Illuminate\Foundation\Application):(void))|null  $resolvingCallback
      * @param  array<string, mixed>  $options
-     * @return \Illuminate\Foundation\Application
      *
      * @phpstan-param TConfig  $options
+     *
+     * @return \Illuminate\Foundation\Application
      */
     public static function createFromConfig(ConfigContract $config, ?callable $resolvingCallback = null, array $options = [])
     {
@@ -199,12 +212,21 @@ class Application
      */
     public static function flushState(?object $instance = null): void
     {
+        AboutCommand::flushState();
         Artisan::forgetBootstrappers();
+        ChannelListCommand::resolveTerminalWidthUsing(null);
         Component::flushCache();
         Component::forgetComponentsResolver();
         Component::forgetFactory();
+        ConvertEmptyStringsToNull::flushState();
         HandleExceptions::forgetApp();
         JsonResource::wrap('data');
+        Model::handleDiscardedAttributeViolationUsing(null);
+        Model::handleLazyLoadingViolationUsing(null);
+        Model::handleMissingAttributeViolationUsing(null);
+        Model::preventAccessingMissingAttributes(false);
+        Model::preventLazyLoading(false);
+        Model::preventSilentlyDiscardingAttributes(false);
         Queue::createPayloadUsing(null);
         RegisterProviders::flushState();
         RouteListCommand::resolveTerminalWidthUsing(null);
@@ -212,15 +234,21 @@ class Application
         SchemaBuilder::$defaultStringLength = 255;
         SchemaBuilder::$defaultMorphKeyType = 'int';
         Signals::resolveAvailabilityUsing(null);
+        Sleep::fake(false);
+        Str::createRandomStringsNormally();
+        Str::createUlidsNormally();
+        Str::createUuidsNormally();
+        TrimStrings::flushState();
     }
 
     /**
      * Configure the application options.
      *
      * @param  array<string, mixed>  $options
-     * @return $this
      *
      * @phpstan-param TConfig  $options
+     *
+     * @return $this
      */
     public function configure(array $options)
     {
@@ -243,7 +271,7 @@ class Application
     /**
      * Ignore package discovery from.
      *
-     * @return array
+     * @return array<int, string>
      */
     public function ignorePackageDiscoveriesFrom()
     {
@@ -254,7 +282,7 @@ class Application
      * Get package providers.
      *
      * @param  \Illuminate\Foundation\Application  $app
-     * @return array
+     * @return array<int, class-string>
      */
     protected function getPackageProviders($app)
     {
@@ -347,7 +375,7 @@ class Application
     {
         $kernel = Workbench::applicationConsoleKernel() ?? 'Orchestra\Testbench\Console\Kernel';
 
-        if (is_file($app->basePath('app/Console/Kernel.php')) && class_exists('App\Console\Kernel')) {
+        if (is_file($app->basePath(join_paths('app', 'Console', 'Kernel.php'))) && class_exists('App\Console\Kernel')) {
             $kernel = 'App\Console\Kernel';
         }
 
@@ -364,7 +392,7 @@ class Application
     {
         $kernel = Workbench::applicationHttpKernel() ?? 'Orchestra\Testbench\Http\Kernel';
 
-        if (is_file($app->basePath('app/Http/Kernel.php')) && class_exists('App\Http\Kernel')) {
+        if (is_file($app->basePath(join_paths('app', 'Http', 'Kernel.php'))) && class_exists('App\Http\Kernel')) {
             $kernel = 'App\Http\Kernel';
         }
 

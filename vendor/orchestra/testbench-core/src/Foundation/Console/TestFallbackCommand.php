@@ -7,6 +7,9 @@ use RuntimeException;
 use Symfony\Component\Process\Exception\ProcessSignaledException;
 use Symfony\Component\Process\Process;
 
+use function Laravel\Prompts\confirm;
+use function Orchestra\Sidekick\is_testbench_cli;
+use function Orchestra\Sidekick\phpunit_version_compare;
 use function Orchestra\Testbench\package_path;
 use function Orchestra\Testbench\php_binary;
 
@@ -22,14 +25,16 @@ class TestFallbackCommand extends Command
      */
     protected $signature = 'package:test
         {--without-tty : Disable output to TTY}
-        {--c|configuration= : Read configuration from XML file}
         {--compact : Indicates whether the compact printer should be used}
-        {--coverage : Indicates whether code coverage information should be collected}
-        {--min= : Indicates the minimum threshold enforcement for code coverage}
+        {--configuration= : Read configuration from XML file}
+        {--coverage : Indicates whether the coverage information should be collected}
+        {--min= : Indicates the minimum threshold enforcement for coverage}
         {--p|parallel : Indicates if the tests should run in parallel}
         {--profile : Lists top 10 slowest tests}
         {--recreate-databases : Indicates if the test databases should be re-created}
         {--drop-databases : Indicates if the test databases should be dropped}
+        {--without-databases : Indicates if database configuration should be performed}
+        {--c|--custom-argument : Add custom env variables}
     ';
 
     /**
@@ -45,7 +50,7 @@ class TestFallbackCommand extends Command
     {
         parent::configure();
 
-        if (! \defined('TESTBENCH_CORE')) {
+        if (! is_testbench_cli()) {
             $this->setHidden(true);
         }
     }
@@ -57,7 +62,7 @@ class TestFallbackCommand extends Command
      */
     public function handle()
     {
-        if (! $this->confirm('Running tests requires "nunomaduro/collision". Do you wish to install it as a dev dependency?')) {
+        if (! confirm('Running tests requires "nunomaduro/collision". Do you wish to install it as a dev dependency?')) {
             return 1;
         }
 
@@ -73,7 +78,13 @@ class TestFallbackCommand extends Command
      */
     protected function installCollisionDependencies()
     {
-        $command = \sprintf('%s require "nunomaduro/collision:^%s" --dev', $this->findComposer(), '6.2');
+        $version = match (true) {
+            phpunit_version_compare('10.3', '>=') => '7.8',
+            phpunit_version_compare('10', '>=') => '7.4',
+            default => '6.4',
+        };
+
+        $command = \sprintf('%s require "nunomaduro/collision:^%s" --dev', $this->findComposer(), $version);
 
         $process = Process::fromShellCommandline($command, null, null, null, null);
 

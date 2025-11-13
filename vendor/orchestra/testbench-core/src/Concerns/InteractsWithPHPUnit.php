@@ -2,11 +2,15 @@
 
 namespace Orchestra\Testbench\Concerns;
 
+use Closure;
 use Illuminate\Support\Collection;
 use Orchestra\Testbench\PHPUnit\AttributeParser;
 use PHPUnit\Framework\TestCase as PHPUnitTestCase;
+use PHPUnit\Metadata\Annotation\Parser\Registry as PHPUnit10Registry;
 use PHPUnit\Util\Annotation\Registry as PHPUnit9Registry;
 use ReflectionClass;
+
+use function Orchestra\Sidekick\phpunit_version_compare;
 
 /**
  * @internal
@@ -16,6 +20,20 @@ use ReflectionClass;
 trait InteractsWithPHPUnit
 {
     use InteractsWithTestCase;
+
+    /**
+     * The cached test case setUp resolver.
+     *
+     * @var (\Closure(\Closure):(void))|null
+     */
+    protected $testCaseSetUpCallback;
+
+    /**
+     * The cached test case tearDown resolver.
+     *
+     * @var (\Closure(\Closure):(void))|null
+     */
+    protected $testCaseTearDownCallback;
 
     /**
      * The cached class attributes for test case.
@@ -80,7 +98,9 @@ trait InteractsWithPHPUnit
             return null;
         }
 
-        return $this->getName(false);
+        return phpunit_version_compare('10', '>=')
+            ? $this->name() // @phpstan-ignore-line
+            : $this->getName(false); // @phpstan-ignore-line
     }
 
     /**
@@ -99,14 +119,18 @@ trait InteractsWithPHPUnit
             return new Collection;
         }
 
+        $registry = phpunit_version_compare('10', '>=')
+            ? PHPUnit10Registry::getInstance() // @phpstan-ignore-line
+            : PHPUnit9Registry::getInstance(); // @phpstan-ignore-line
+
         /** @var array<string, mixed> $annotations */
         $annotations = rescue(
-            fn () => PHPUnit9Registry::getInstance()->forMethod($className, $methodName)->symbolAnnotations(),
+            fn () => $registry->forMethod($className, $methodName)->symbolAnnotations(),
             [],
             false
         );
 
-        return Collection::make($annotations);
+        return new Collection($annotations);
     }
 
     /**
@@ -144,24 +168,24 @@ trait InteractsWithPHPUnit
     protected static function resolvePhpUnitAttributesForMethod(string $className, ?string $methodName = null): Collection
     {
         if (! isset(static::$cachedTestCaseClassAttributes[$className])) {
-            static::$cachedTestCaseClassAttributes[$className] = rescue(static function () use ($className) {
-                return AttributeParser::forClass($className);
-            }, [], false);
+            static::$cachedTestCaseClassAttributes[$className] = rescue(
+                static fn () => AttributeParser::forClass($className), [], false
+            );
         }
 
         if (! \is_null($methodName) && ! isset(static::$cachedTestCaseMethodAttributes["{$className}:{$methodName}"])) {
-            static::$cachedTestCaseMethodAttributes["{$className}:{$methodName}"] = rescue(static function () use ($className, $methodName) {
-                return AttributeParser::forMethod($className, $methodName);
-            }, [], false);
+            static::$cachedTestCaseMethodAttributes["{$className}:{$methodName}"] = rescue(
+                static fn () => AttributeParser::forMethod($className, $methodName), [], false
+            );
         }
 
         /** @var \Illuminate\Support\Collection<class-string<TTestingFeature>, array<int, TTestingFeature>> $attributes */
-        $attributes = Collection::make(array_merge(
+        $attributes = (new Collection(array_merge(
             static::$testCaseTestingFeatures,
             static::$cachedTestCaseClassAttributes[$className],
             static::$testCaseMethodTestingFeatures,
             ! \is_null($methodName) ? static::$cachedTestCaseMethodAttributes["{$className}:{$methodName}"] : [],
-        ))->groupBy('key')
+        )))->groupBy('key')
             ->map(static function ($attributes) {
                 /** @var \Illuminate\Support\Collection<int, array{key: class-string<TTestingFeature>, instance: TTestingFeature}> $attributes */
                 return $attributes->map(static function ($attribute) {
@@ -171,6 +195,32 @@ trait InteractsWithPHPUnit
             });
 
         return $attributes;
+    }
+
+    /**
+     * Define the setUp environment using callback.
+     *
+     * @param  \Closure(\Closure):void  $setUp
+     * @return void
+     *
+     * @codeCoverageIgnore
+     */
+    public function setUpTheEnvironmentUsing(Closure $setUp): void
+    {
+        $this->testCaseSetUpCallback = $setUp;
+    }
+
+    /**
+     * Define the tearDown environment using callback.
+     *
+     * @param  \Closure(\Closure):void  $tearDown
+     * @return void
+     *
+     * @codeCoverageIgnore
+     */
+    public function tearDownTheEnvironmentUsing(Closure $tearDown): void
+    {
+        $this->testCaseTearDownCallback = $tearDown;
     }
 
     /**
@@ -198,9 +248,13 @@ trait InteractsWithPHPUnit
         static::$cachedTestCaseClassAttributes = [];
         static::$cachedTestCaseMethodAttributes = [];
 
+        $registry = phpunit_version_compare('10', '>=')
+            ? PHPUnit10Registry::getInstance() // @phpstan-ignore-line
+            : PHPUnit9Registry::getInstance(); // @phpstan-ignore-line
+
         (function () {
             $this->classDocBlocks = [];
             $this->methodDocBlocks = [];
-        })->call(PHPUnit9Registry::getInstance());
+        })->call($registry);
     }
 }

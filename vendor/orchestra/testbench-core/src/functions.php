@@ -15,7 +15,6 @@ use Illuminate\Support\Str;
 use Illuminate\Testing\PendingCommand;
 use InvalidArgumentException;
 use Orchestra\Sidekick;
-use PHPUnit\Runner\Version;
 
 /**
  * Create Laravel application instance.
@@ -25,10 +24,19 @@ use PHPUnit\Runner\Version;
  * @param  string|null  $basePath
  * @param  (callable(\Illuminate\Foundation\Application):(void))|null  $resolvingCallback
  * @param  array{extra?: array{providers?: array, dont-discover?: array, env?: array}, load_environment_variables?: bool, enabled_package_discoveries?: bool}  $options
+ * @param  \Orchestra\Testbench\Foundation\Config|null  $config
  * @return \Orchestra\Testbench\Foundation\Application
  */
-function container(?string $basePath = null, ?callable $resolvingCallback = null, array $options = []): Foundation\Application
-{
+function container(
+    ?string $basePath = null,
+    ?callable $resolvingCallback = null,
+    array $options = [],
+    ?Foundation\Config $config = null
+): Foundation\Application {
+    if ($config instanceof Foundation\Config) {
+        return Foundation\Application::makeFromConfig($config, $resolvingCallback, $options);
+    }
+
     return Foundation\Application::make($basePath, $resolvingCallback, $options);
 }
 
@@ -69,7 +77,7 @@ function remote(array|string $command, array|string $env = [], ?bool $tty = null
         package_path(), $env, $tty
     );
 
-    $binary = \defined('TESTBENCH_DUSK') ? 'testbench-dusk' : 'testbench';
+    $binary = Sidekick\is_testbench_cli(dusk: true) ? 'testbench-dusk' : 'testbench';
 
     $commander = is_file($vendorBinary = package_path('vendor', 'bin', $binary))
         ? $vendorBinary
@@ -100,9 +108,11 @@ function once($callback): Closure
  *
  * @api
  *
- * @param  \Illuminate\Contracts\Foundation\Application  $app
- * @param  string  $name
- * @param  (\Closure(object, \Illuminate\Contracts\Foundation\Application):(mixed))|null  $callback
+ * @template TLaravel of \Illuminate\Contracts\Foundation\Application
+ *
+ * @param  TLaravel  $app
+ * @param  class-string|string  $name
+ * @param  (\Closure(object, TLaravel):(mixed))|null  $callback
  * @return void
  */
 function after_resolving(ApplicationContract $app, string $name, ?Closure $callback = null): void
@@ -156,11 +166,11 @@ function default_environment_variables(): array
  */
 function defined_environment_variables(): array
 {
-    return Collection::make(array_merge($_SERVER, $_ENV))
+    return (new Collection(array_merge($_SERVER, $_ENV)))
         ->keys()
-        ->mapWithKeys(static fn (string $key) => [$key => Foundation\Env::forward($key)])
+        ->mapWithKeys(static fn (string $key) => [$key => Sidekick\Env::forward($key)])
         ->unless(
-            Foundation\Env::has('TESTBENCH_WORKING_PATH'), static fn ($env) => $env->put('TESTBENCH_WORKING_PATH', package_path())
+            Sidekick\Env::has('TESTBENCH_WORKING_PATH'), static fn ($env) => $env->put('TESTBENCH_WORKING_PATH', package_path())
         )->all();
 }
 
@@ -174,7 +184,7 @@ function defined_environment_variables(): array
  */
 function parse_environment_variables($variables): array
 {
-    return Collection::make($variables)
+    return (new Collection($variables))
         ->transform(static function ($value, $key) {
             if (\is_bool($value) || \in_array($value, ['true', 'false'])) {
                 $value = \in_array($value, [true, 'true']) ? '(true)' : '(false)';
@@ -305,7 +315,7 @@ function package_path(array|string $path = ''): string
 
     $workingPath = \defined('TESTBENCH_WORKING_PATH')
         ? TESTBENCH_WORKING_PATH
-        : Foundation\Env::get('TESTBENCH_WORKING_PATH', getcwd());
+        : Sidekick\Env::get('TESTBENCH_WORKING_PATH', getcwd());
 
     if ($argumentCount === 1 && \is_string($path) && str_starts_with($path, './')) {
         return transform_relative_path($path, $workingPath);
@@ -396,9 +406,10 @@ function laravel_vendor_exists(ApplicationContract $app, ?string $workingPath = 
  *
  * @param  string  $version
  * @param  string|null  $operator
- * @return int|bool
  *
  * @phpstan-param  TOperator  $operator
+ *
+ * @return int|bool
  *
  * @phpstan-return (TOperator is null ? int : bool)
  */
@@ -416,13 +427,14 @@ function laravel_version_compare(string $version, ?string $operator = null)
  *
  * @param  string  $version
  * @param  string|null  $operator
- * @return int|bool
- *
- * @throws \RuntimeException
  *
  * @phpstan-param  TOperator  $operator
  *
+ * @return int|bool
+ *
  * @phpstan-return (TOperator is null ? int : bool)
+ *
+ * @throws \RuntimeException
  */
 function phpunit_version_compare(string $version, ?string $operator = null)
 {
@@ -477,10 +489,12 @@ function laravel_or_fail($app, ?string $caller = null): Application
 
     if (\is_null($caller)) {
         $caller = transform(debug_backtrace()[1] ?? null, function ($debug) {
+            /** @phpstan-ignore isset.offset */
             if (isset($debug['class']) && isset($debug['function'])) {
                 return \sprintf('%s::%s', $debug['class'], $debug['function']);
             }
 
+            /** @phpstan-ignore offsetAccess.notFound */
             return $debug['function'];
         });
     }

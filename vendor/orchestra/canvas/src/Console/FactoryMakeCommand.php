@@ -8,8 +8,10 @@ use Orchestra\Canvas\Core\Concerns\ResolvesPresetStubs;
 use Orchestra\Canvas\Core\Concerns\UsesGeneratorOverrides;
 use Symfony\Component\Console\Attribute\AsCommand;
 
+use function Illuminate\Filesystem\join_paths;
+
 /**
- * @see https://github.com/laravel/framework/blob/9.x/src/Illuminate/Database/Console/Factories/FactoryMakeCommand.php
+ * @see https://github.com/laravel/framework/blob/10.x/src/Illuminate/Database/Console/Factories/FactoryMakeCommand.php
  */
 #[AsCommand(name: 'make:factory', description: 'Create a new model factory')]
 class FactoryMakeCommand extends \Illuminate\Database\Console\Factories\FactoryMakeCommand
@@ -40,6 +42,7 @@ class FactoryMakeCommand extends \Illuminate\Database\Console\Factories\FactoryM
     #[\Override]
     public function handle()
     {
+        /** @phpstan-ignore return.type */
         return $this->generateCode() ? self::SUCCESS : self::FAILURE;
     }
 
@@ -51,7 +54,7 @@ class FactoryMakeCommand extends \Illuminate\Database\Console\Factories\FactoryM
      */
     protected function resolveDefaultStubPath($stub)
     {
-        return __DIR__.$stub;
+        return join_paths(__DIR__, $stub);
     }
 
     /**

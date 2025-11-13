@@ -8,7 +8,7 @@ use Orchestra\Canvas\Core\Concerns\UsesGeneratorOverrides;
 use Symfony\Component\Console\Attribute\AsCommand;
 
 /**
- * @see https://github.com/laravel/framework/blob/9.x/src/Illuminate/Foundation/Console/ProviderMakeCommand.php
+ * @see https://github.com/laravel/framework/blob/10.x/src/Illuminate/Foundation/Console/ProviderMakeCommand.php
  */
 #[AsCommand(name: 'make:provider', description: 'Create a new service provider class')]
 class ProviderMakeCommand extends \Illuminate\Foundation\Console\ProviderMakeCommand
@@ -38,6 +38,7 @@ class ProviderMakeCommand extends \Illuminate\Foundation\Console\ProviderMakeCom
     #[\Override]
     public function handle()
     {
+        /** @phpstan-ignore return.type */
         return $this->generateCode() ? self::SUCCESS : self::FAILURE;
     }
 

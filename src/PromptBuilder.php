@@ -2,74 +2,106 @@
 namespace NoahMedra\PromptBuilder;
 
 use Closure;
+use Exception;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
+use NoahMedra\PromptBuilder\BuilderOutput;
+use NoahMedra\PromptBuilder\BuilderInput;
+use NoahMedra\PromptBuilder\Drivers\DriverInterface;
+use NoahMedra\PromptBuilder\Drivers\OllamaDriver;
 
 class PromptBuilder
 {
-    protected string $model = 'ollama';    // Un seul modèle par défaut
-    protected string $language = 'fr';
-    protected string $tone = 'neutre';
-    protected string $prompt;
-    protected array $callbacks = [];
-    protected bool $expectJson = true;
-    protected array $handlers = [];
+    protected $params = [];
+    protected string $ask;
+    protected bool $expectJson = false;
     protected string $context = '';
-    protected array $parameters = [];
+    private $instructions;
+    protected bool $use_history = false; 
+    private $manager;
+    private ?string $jsonFormat = null;
+    private ?DriverInterface $driver = null;
+    private ?BuilderInput $input;
+    private ?BuilderOutput $output;
+
+    public function __construct()
+    {   
+        $this->instructions = collect([]);
+        $this->manager = new HistoryManager();
+        $this->driver = new OllamaDriver();
+    }
 
 
 
-    public function withParameters(array $parameters): self
+    /**
+     * Permet de définir dynamiquement quel driver utiliser.
+     *
+     * @param string $driverClass
+     * @return $this
+     */
+    public function driver(string $driverClass): self
     {
-        $this->parameters = $parameters;
+        // Vérifie si la classe du driver existe
+        if (!class_exists($driverClass)) {
+            throw new \Exception("Le driver spécifié n'existe pas : {$driverClass}");
+        }
+
+        // On instancie dynamiquement le driver
+        $this->driver = new $driverClass();  // Instanciation dynamique
+
         return $this;
     }
+    
+
+    
 
     public static function make(): self
     {
         return new self();
     }
 
-    public function handle(Closure $handler): self
-    {
-        $this->handlers[] = $handler;
+
+    public function useHistory(bool $status = true) : self{
+        $this->use_history = $status;
         return $this;
     }
 
-    public function expectJson(bool $expect = true): self
-    {
-        $this->expectJson = $expect;
+    public function withParams(array $params){
+        $this->params = $params;
         return $this;
     }
 
-    public function for(string $model): self
+    // Méthode pour ajouter des instructions directement
+    public function instruction(string $instructionText, ?Closure $callback = null): self
     {
-        $this->model = $model;
+        $instruction = new InstructionBuilder($instructionText);
+        if($callback instanceof Closure){
+            $callback($instruction);
+        }
+        $this->instructions->push($instruction);
         return $this;
     }
 
-    public function language(string $lang): self
-    {
-        $this->language = $lang;
-        return $this;
-    }
 
-    public function tone(string $tone): self
-    {
-        $this->tone = $tone;
+    public function jsonify(string $json): self
+    {        
+        $decoded = json_decode($json, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new Exception('Json format invalide.');
+        }
+
+        $this->expectJson = true;
+        $this->jsonFormat = $json;
         return $this;
     }
 
     public function ask(string $question): self
     {
-        $this->prompt = $question;
+        $this->ask = $question;
         return $this;
     }
 
-    public function then(Closure $callback): self
-    {
-        $this->callbacks[] = $callback;
-        return $this;
-    }
 
     public function context(string $context): self
     {
@@ -77,46 +109,107 @@ class PromptBuilder
         return $this;
     }
 
-    public function run()
+    public function process()
     {
-        $response = app(Drivers\DriverFactory::class)
-            ->make($this->model)
-            ->sendPrompt($this->buildPrompt());
-        // Préparer le dataset JSON
-        $data = json_decode($response, true);
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new \Exception("Réponse invalide du modèle IA.");
-        }
-
-        // Passage par les callbacks
-        foreach ($this->callbacks as $callback) {
-            $response = $callback($response);
-        }
-
-        // Préparer le dataset JSON
-        $data = json_decode($response, true);
-        $dataset = collect($data)->map(fn($item) => (object) $item);
-
-        // Appeler tous les handlers
-        foreach ($this->handlers as $handler) {
-            $handler($dataset);
-        }
-
-        return $response;
+        $prompt = $this->buildPrompt();
+        $this->input = new BuilderInput($prompt);
+        $this->input->setParams($this->params);
+        $this->output = new BuilderOutput($this->driver->process($this->input));
     }
 
-    protected function buildPrompt(): string
-    {
-        $formatted = $this->prompt;
-        foreach ($this->parameters as $key => $value) {
-            $formatted = str_replace("{" . $key . "}", $value, $formatted);
+
+
+    private function getContext() {
+        $context = $this->context ? "### Contexte : {$this->context}". PHP_EOL : '';
+
+
+        if ($this->use_history == true) {
+
+            $history = $this->manager->getHistory();
+
+        
+            if (!empty($history)) {
+                $context .= "### Voici l'historique de vos discussions :\n";
+                foreach ($history as $entry) {
+                    $context .= "User: {$entry['input']}\nAI: {$entry['response']}\n";
+                }
+            }
         }
 
-        $contextPart = $this->context ? "[Contexte : {$this->context}]\n" : '';
-        $prompt = "{$contextPart}{$formatted} (Langue: {$this->language}, Ton: {$this->tone})";
-        if ($this->expectJson) {
-            $prompt .= "\nRéponds uniquement en JSON, sans texte supplémentaire.";
+
+        if($this->expectJson == true){
+            $format = is_null($this->jsonFormat) ? 'Votre réponse' : $this->jsonFormat;
+
+            $this->instruction("
+                Veuillez structurer votre réponse en respectant le format JSON ci-dessous. Les données que vous allez fournir seront utilisées par une application tierce et seront probablement décodées ou traitées comme une ressource de données. Il est donc essentiel que vous respectiez le format indiqué pour garantir une bonne compatibilité avec le système cible.
+
+                [
+                    \"resume\": \"Un résumé succinct de votre réponse, contenant l'essentiel, limité à 200 caractères.\",
+                    \"response\": {$format}
+                ]
+
+                ***Assurez-vous que :
+                - Toutes les chaînes de texte contenant des guillemets doivent avoir les guillemets échappés (par exemple, \"votre texte\").
+                - Les virgules ne doivent pas apparaître après le dernier élément dans une liste ou un objet.
+            ");
         }
-        return $prompt;
+
+        return $context;
+    }
+
+
+    private function buildPrompt(): string
+    {
+        $finalPrompt = $this->getContext(); // Ajoute le contexte si nécessaire
+
+        $this->instruction("### Attente : La réponse de l'utilisateur doit impérativement être en **JSON**, sans texte supplémentaire.
+
+            Exemple de réponse formatée en JSON :
+
+            {
+                \"resume\": \"Un résumé concis de la réponse.\",
+                \"response\": \"$this->jsonFormat\"
+            }
+
+            ". PHP_EOL);
+
+        // Si des instructions sont définies, les inclure dans le prompt
+        if (!$this->instructions->isEmpty()) {
+            $finalPrompt .= "### Instructions : ". PHP_EOL;
+        }
+
+        // Ajout des instructions formatées dans le prompt
+        foreach ($this->instructions as $instruction) {
+            $depth = 1;
+            // On assure que le format de chaque instruction est bien respecté
+            $formattedInstruction = $instruction->formatToText($depth);
+            
+            // Ajout de l'instruction formatée au prompt final
+            $finalPrompt .= $formattedInstruction;
+        }
+
+        // Si une demande est définie, l'ajouter à la fin du prompt
+        $finalPrompt .= $this->ask ? "### Demande: {$this->ask}\n" : '';
+
+        return $finalPrompt;
+    }
+
+
+
+    public function setInput(BuilderInput $input) : self{
+        $this->input = $input;
+        return $this;
+    }
+
+
+    public function getOutput() : BuilderOutput{
+        $this->process();
+        return $this->output;
+    }
+
+
+    public function setParams(array $params){
+        $this->params = $params;
+        return $this;
     }
 }

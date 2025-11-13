@@ -8,7 +8,7 @@ use Orchestra\Canvas\Core\Concerns\UsesGeneratorOverrides;
 use Symfony\Component\Console\Attribute\AsCommand;
 
 /**
- * @see https://github.com/laravel/framework/blob/9.x/src/Illuminate/Foundation/Console/ExceptionMakeCommand.php
+ * @see https://github.com/laravel/framework/blob/10.x/src/Illuminate/Foundation/Console/ExceptionMakeCommand.php
  */
 #[AsCommand(name: 'make:exception', description: 'Create a new custom exception class')]
 class ExceptionMakeCommand extends \Illuminate\Foundation\Console\ExceptionMakeCommand
@@ -38,6 +38,7 @@ class ExceptionMakeCommand extends \Illuminate\Foundation\Console\ExceptionMakeC
     #[\Override]
     public function handle()
     {
+        /** @phpstan-ignore return.type */
         return $this->generateCode() ? self::SUCCESS : self::FAILURE;
     }
 
