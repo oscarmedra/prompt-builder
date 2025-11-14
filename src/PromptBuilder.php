@@ -1,11 +1,11 @@
 <?php
 namespace NoahMedra\PromptBuilder;
 
+use App\Providers\PromptDriverServiceProvider;
 use Closure;
 use Exception;
 use NoahMedra\PromptBuilder\BuilderOutput;
 use NoahMedra\PromptBuilder\BuilderInput;
-use NoahMedra\PromptBuilder\Drivers\DriverInterface;
 use NoahMedra\PromptBuilder\Drivers\HuggingFaceDriver;
 use NoahMedra\PromptBuilder\Drivers\OllamaDriver;
 use NoahMedra\PromptBuilder\Drivers\PromptDriverInterface;
@@ -41,7 +41,7 @@ class PromptBuilder
      */
     public function driver(string $driverClass): self
     {
-        if (!class_exists($driverClass) || !is_subclass_of($driverClass, DriverInterface::class)) {
+        if (!class_exists($driverClass) || !is_subclass_of($driverClass, PromptDriverServiceProvider::class)) {
             throw new \Exception("Le driver spécifié n'existe pas ou ne respecte pas l'interface : {$driverClass}");
         }
 
