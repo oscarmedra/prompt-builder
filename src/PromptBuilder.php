@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\App;
 use NoahMedra\PromptBuilder\BuilderOutput;
 use NoahMedra\PromptBuilder\BuilderInput;
 use NoahMedra\PromptBuilder\Drivers\DriverInterface;
+use NoahMedra\PromptBuilder\Drivers\HuggingFaceDriver;
 use NoahMedra\PromptBuilder\Drivers\OllamaDriver;
 
 class PromptBuilder
@@ -28,6 +29,7 @@ class PromptBuilder
     {   
         $this->instructions = collect([]);
         $this->manager = new HistoryManager();
+        $this->driver = new HuggingFaceDriver('riend ut out');
     }
 
 
@@ -191,6 +193,14 @@ class PromptBuilder
         $finalPrompt .= $this->ask ? "### Demande: {$this->ask}\n" : '';
 
         return $finalPrompt;
+    }
+
+     public function when(bool $condition, Closure $ifc, ?Closure $elsec = null): self{
+        if ($condition) {
+            $ifc($this);
+        }
+        
+        return $this;
     }
 
 
