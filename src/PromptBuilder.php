@@ -9,7 +9,7 @@ use NoahMedra\PromptBuilder\BuilderOutput;
 use NoahMedra\PromptBuilder\BuilderInput;
 use NoahMedra\PromptBuilder\Drivers\DriverInterface;
 use NoahMedra\PromptBuilder\Drivers\HuggingFaceDriver;
-use NoahMedra\PromptBuilder\Drivers\OllamaDriver;
+use OllamaDriver;
 
 class PromptBuilder
 {
@@ -29,7 +29,7 @@ class PromptBuilder
     {   
         $this->instructions = collect([]);
         $this->manager = new HistoryManager();
-        $this->driver = new HuggingFaceDriver('riend ut out');
+        $this->driver = new OllamaDriver();
     }
 
 
