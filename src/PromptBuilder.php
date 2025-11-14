@@ -210,7 +210,9 @@ class PromptBuilder
 
 
     public function getOutput() : BuilderOutput{
-        $this->process();
+        if(is_null($this->output)){
+            $this->process();
+        }
         return $this->output;
     }
 

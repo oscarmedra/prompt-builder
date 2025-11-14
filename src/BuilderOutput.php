@@ -21,6 +21,7 @@ class BuilderOutput{
     public function get(string $path){
         $keys = explode('.', $path);
 
+        $data = $this->data;
         foreach ($keys as $key) {
             if (is_array($data)) {
                 if (isset($data[$key])) {
@@ -32,10 +33,10 @@ class BuilderOutput{
                 if (isset($data->{$key})) {
                     $data = $data->{$key};
                 } else {
-                    return null; 
+                    return null;  // Clé inexistante dans l'objet
                 }
             } else {
-                return null;
+                return null;  // Si ce n'est ni un tableau ni un objet
             }
         }
     }
