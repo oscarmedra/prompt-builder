@@ -9,7 +9,7 @@ use NoahMedra\PromptBuilder\BuilderOutput;
 use NoahMedra\PromptBuilder\BuilderInput;
 use NoahMedra\PromptBuilder\Drivers\DriverInterface;
 use NoahMedra\PromptBuilder\Drivers\HuggingFaceDriver;
-use OllamaDriver;
+use NoahMedra\PromptBuilder\Drivers\OllamaDriver;
 
 class PromptBuilder
 {
