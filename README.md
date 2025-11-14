@@ -136,8 +136,6 @@ class OllamaDriver implements DriverInterface
 
     private function executePrompt(BuilderInput $input) : string
     {
-        $output = '';
-        try {
             $response = Http::withHeaders([
                 'Content-Type' => 'application/x-www-form-urlencoded',
             ])->post('http://localhost:11434/api/chat', [
@@ -156,12 +154,7 @@ class OllamaDriver implements DriverInterface
                 throw new Exception($response->body());
             }
 
-            $output = $response->body();
-        } catch (Exception $e) {
-            $output = $e->getMessage();
-        }
-
-        return $output;
+            return $response->body();
     }
 }
 ```
