@@ -2,12 +2,39 @@
 
 namespace NoahMedra\PromptBuilder;
 
-class BuilderInput {
-
-    protected array $params = [];
+class BuilderInput
+{
+    public $input;
+    public $params;
     protected array $bs4_files = [];  // Tableau pour stocker les fichiers Base64
 
-    // Méthode pour ajouter des fichiers Base64
+
+    public function __construct(string $input)
+    {
+        $this->input = $input;
+    }
+
+    /**
+     * Retourne le texte du prompt fourni.
+     *
+     * @return string
+     */
+    public function getPromptText()
+    {
+        return $this->input;
+    }
+
+    /**
+     * Retourne les paramètres supplémentaires.
+     *
+     * @return array
+     */
+    public function getParams()
+    {
+        return $this->params;
+    }
+
+        // Méthode pour ajouter des fichiers Base64
     public function addBs4File(string $base64file): self
     {
         $this->bs4_files[] = $base64file;
@@ -25,11 +52,6 @@ class BuilderInput {
     {
         $this->params = $params;
         return $this;
-    }
-
-    public function getParams(): array
-    {
-        return $this->params;
     }
 
 
@@ -58,6 +80,6 @@ class BuilderInput {
 
         return $data;
     }
-
 }
+
 
