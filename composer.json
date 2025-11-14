@@ -3,6 +3,13 @@
     "version": "1.0.0",
     "description": "Laravel package to build dynamic AI prompts",
     "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Nouha DRAME",
+            "email": "noudrahame97@gmail.com"
+        }
+    ],
     "autoload": {
       "psr-4": {
         "NoahMedra\\PromptBuilder\\": "src/"
