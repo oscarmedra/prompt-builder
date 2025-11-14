@@ -104,10 +104,10 @@ echo $output->('model'); // Display the model's response
 
 ### Handling **JSON** responses
 
-If you want the AI's response to be formatted as JSON, use the `jsonify()` method.
+If you want the AI's response to be formatted as JSON, use the `expectResponseFormat()` method.
 
 ```php
-$builder->jsonify('{"resume": "Summary of the response", "response": "Your response here"}');
+$builder->expectResponseFormat('{"resume": "Summary of the response", "response": "Your response here"}');
 ```
 
 ### **Driver: How It Works (Input/Output)**
