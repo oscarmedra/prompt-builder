@@ -1,5 +1,4 @@
 <?php
-
 namespace NoahMedra\PromptBuilder\Drivers;
 
 use Exception;
@@ -7,7 +6,7 @@ use Illuminate\Support\Facades\Http;
 use NoahMedra\PromptBuilder\BuilderInput;
 use NoahMedra\PromptBuilder\BuilderOutput;
 
-class OllamaDriver implements PromptDriverInterface{
+class OllamaDriver implements  PromptDriverInterface{
 
 
     public function process(BuilderInput $input) : BuilderOutput{
