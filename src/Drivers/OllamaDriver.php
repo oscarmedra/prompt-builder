@@ -1,14 +1,17 @@
 <?php
 
+namespace NoahMedra\PromptBuilder\Drivers;
+
+use Exception;
 use Illuminate\Support\Facades\Http;
+use NoahMedra\PromptBuilder\BuilderInput;
 use NoahMedra\PromptBuilder\BuilderOutput;
-use NoahMedra\PromptBuilder\Drivers\DriverInterface;
 use SebastianBergmann\CodeCoverage\Node\Builder;
 
 class OllamaDriver implements DriverInterface{
 
 
-    public function process(Builder $input){
+    public function process(BuilderInput $input) : BuilderOutput{
         $output = '';
         try{
             $response = Http::withHeaders([
