@@ -3,16 +3,16 @@
 namespace NoahMedra\PromptBuilder;
 
 class BuilderOutput{
-    protected string $output;
-    protected $data;
+    private string $output;
+    private $data = null;
 
     
     public function __construct(string $output) {
         $this->output = $output;
         if($this->isValidJson()){
             $this->data = json_decode($this->output, true);
+            $this->data = json_decode($output);
         }
-        $this->data = json_decode($output);
     }
 
 
@@ -27,18 +27,21 @@ class BuilderOutput{
                 if (isset($data[$key])) {
                     $data = $data[$key];
                 } else {
-                    return null;
+                    $data = null;
                 }
             }elseif (is_object($data)) {
                 if (isset($data->{$key})) {
                     $data = $data->{$key};
                 } else {
-                    return null;  // Clé inexistante dans l'objet
+                    $data = null;
                 }
             } else {
-                return null;  // Si ce n'est ni un tableau ni un objet
+                $data = null;
             }
         }
+
+
+        return $data;
     }
 
     private function isValidJson(){
