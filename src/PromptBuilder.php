@@ -40,12 +40,10 @@ class PromptBuilder
      */
     public function driver(string $driverClass): self
     {
-        // Vérifie si la classe du driver existe
-        if (!class_exists($driverClass)) {
-            throw new \Exception("Le driver spécifié n'existe pas : {$driverClass}");
+        if (!class_exists($driverClass) || !is_subclass_of($driverClass, DriverInterface::class)) {
+            throw new \Exception("Le driver spécifié n'existe pas ou ne respecte pas l'interface : {$driverClass}");
         }
 
-        // On instancie dynamiquement le driver
         $this->driver = new $driverClass();  // Instanciation dynamique
 
         return $this;
@@ -71,8 +69,7 @@ class PromptBuilder
     }
 
     // Méthode pour ajouter des instructions directement
-    public function instruction(string $instructionText, ?Closure $callback = null): self
-    {
+    public function instruction(string $instructionText, ?Closure $callback = null): self{
         $instruction = new InstructionBuilder($instructionText);
         if($callback instanceof Closure){
             $callback($instruction);
@@ -130,7 +127,7 @@ class PromptBuilder
             if (!empty($history)) {
                 $context .= "### Voici l'historique de vos discussions :\n";
                 foreach ($history as $entry) {
-                    $context .= "User: {$entry['input']}\nAI: {$entry['response']}\n";
+                    $context .= "User: {$entry['input']}\n You: {$entry['output']}\n";
                 }
             }
         }
@@ -193,9 +190,11 @@ class PromptBuilder
         return $finalPrompt;
     }
 
-     public function when(bool $condition, Closure $ifc, ?Closure $elsec = null): self{
+    public function when(bool $condition, Closure $ifc, ?Closure $elsec = null): self{
         if ($condition) {
             $ifc($this);
+        } elseif ($elsec) {
+            $elsec($this);
         }
         
         return $this;

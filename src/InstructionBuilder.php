@@ -12,52 +12,50 @@ class InstructionBuilder
 {
     protected string $text;   // Le texte de l'instruction
     protected Closure $callback;         // Le callback pour gérer les conditions
-    protected Collection $conditions;
+    protected Collection $instructions;
     
     public function __construct(string $instructionText)
     {
         $this->text = $instructionText;
-        $this->conditions = collect([]);
+        $this->instructions = collect([]);
     }
 
 
-    // Ajout de la méthode `when()`
-    public function when(string $condition, Closure $ifcallback, ?Closure $elscallback = null): self
-    {
-        // Si la condition est remplie, on applique le callback
+    public function when(bool $condition, Closure $ifc, ?Closure $elsec = null): self{
         if ($condition) {
-            $cb = new ConditionBuilder('Si ' . $condition);
-            $ifcallback($cb);
-            // $this->conditions[$condition] =  $cb->instructions;
-            $this->conditions->push($cb);
-        }
-
-
-        if (!is_null($elscallback) && $elscallback instanceof Closure) {
-            $cb = new ConditionBuilder('Sinon, ');
-            $elscallback($cb);
-            $this->conditions->push($cb);
+            $ifc($this);
+        } elseif ($elsec) {
+            $elsec($this);
         }
         
         return $this;
     }
 
 
-    public function getConditions() : Collection{
-        return $this->conditions;
-    }
-
-
     public function formatToText(int $depth) : string{
-        $text = str_repeat(" ", $depth) .'-'. $this->text.PHP_EOL;
+        $text = str_repeat("  ", $depth) .'-'. $this->text.PHP_EOL;
 
-        $this->conditions->each(function($cb) use(&$text, $depth){
-            $text .= $cb->formatToText(++$depth);
+        $this->instructions->each(function($ist) use(&$text, $depth){
+            $text .= $ist->formatToText(++$depth);
 
             $text.PHP_EOL;
         });
 
         return $text;
+    }
+
+
+
+    public function instruction(string $instructionText, ?Closure $callback = null): self
+    {
+        $ist = new InstructionBuilder($instructionText);
+
+        if ($callback instanceof Closure) {
+            $callback($ist); 
+        }
+
+        $this->instructions->push($ist);
+        return $this;
     }
 
 

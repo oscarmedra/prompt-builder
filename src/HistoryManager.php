@@ -1,44 +1,47 @@
-<?php
+<?php 
+
 namespace NoahMedra\PromptBuilder;
+
+use Illuminate\Support\Facades\Storage;
 
 class HistoryManager {
     private array $history = [];
     private string $historyFile;
 
     public function __construct() {
-        if (!isset($_SESSION['history_file'])) {
-            // Si ce n'est pas le cas, on génère un nouveau chemin vers un fichier d'historique
-            $_SESSION['history_file'] = __DIR__ . '/storage/history_' . session_id() . '.json';
-        }
+        // Définir le chemin vers le fichier d'historique dans le répertoire de stockage
+        $this->historyFile = storage_path('app/history_' . session_id() . '.json');
 
-        // Définir le chemin vers le fichier d'historique (utilise la session pour retrouver le fichier)
-        $this->historyFile = $_SESSION['history_file'];
-
-
-        // Charger l'historique depuis le fichier si il existe
+        // Charger l'historique depuis le fichier s'il existe
         $this->loadHistory();
     }
 
     // Charger l'historique depuis le fichier
     private function loadHistory(): void {
-        if (file_exists($this->historyFile)) {
-            $json = file_get_contents($this->historyFile);
+        // Vérifier si le fichier existe et le lire
+        if (Storage::exists($this->historyFile)) {
+            $json = Storage::get($this->historyFile);
             $this->history = json_decode($json, true);
         }
     }
 
     // Sauvegarder l'historique dans le fichier
     private function saveHistory(): void {
-        file_put_contents($this->historyFile, json_encode($this->history, JSON_PRETTY_PRINT));
+        // Sauvegarder l'historique dans le fichier JSON
+        Storage::put($this->historyFile, json_encode($this->history, JSON_PRETTY_PRINT));
     }
 
     // Ajouter un nouveau prompt et réponse à l'historique
     public function addToHistory(string $input, string $response): void {
-        $this->history[] = ['id' => count($this->history) + 1, 'input' => $input, 'response' => $response];
+        $this->history[] = [
+            'id' => count($this->history) + 1,
+            'input' => $input,
+            'output' => $response
+        ];
         $this->saveHistory();  // Sauvegarder l'historique après chaque ajout
     }
 
-
+    // Récupérer l'historique
     public function getHistory(): array {
         return $this->history;
     }
