@@ -3,8 +3,6 @@ namespace NoahMedra\PromptBuilder;
 
 use Closure;
 use Exception;
-use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\App;
 use NoahMedra\PromptBuilder\BuilderOutput;
 use NoahMedra\PromptBuilder\BuilderInput;
 use NoahMedra\PromptBuilder\Drivers\DriverInterface;
@@ -115,7 +113,7 @@ class PromptBuilder
         $prompt = $this->buildPrompt();
         $this->input = new BuilderInput($prompt);
         $this->input->setParams($this->params);
-        $this->output = new BuilderOutput($this->driver->process($this->input));
+        $this->output = $this->driver->process($this->input);
     }
 
 
