@@ -8,6 +8,7 @@ use NoahMedra\PromptBuilder\BuilderInput;
 use NoahMedra\PromptBuilder\Drivers\DriverInterface;
 use NoahMedra\PromptBuilder\Drivers\HuggingFaceDriver;
 use NoahMedra\PromptBuilder\Drivers\OllamaDriver;
+use NoahMedra\PromptBuilder\Drivers\PromptDriverInterface;
 
 class PromptBuilder
 {
@@ -19,7 +20,7 @@ class PromptBuilder
     protected bool $use_history = false; 
     private $manager;
     private ?string $jsonFormat = null;
-    private ?DriverInterface $driver = null;
+    private ?PromptDriverInterface $driver = null;
     private ?BuilderInput $input;
     private ?BuilderOutput $output;
 
@@ -213,6 +214,11 @@ class PromptBuilder
             $this->process();
         }
         return $this->output;
+    }
+
+
+    public function getInput() : BuilderInput{
+        return $this->input;
     }
 
 

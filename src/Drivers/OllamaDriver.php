@@ -6,9 +6,8 @@ use Exception;
 use Illuminate\Support\Facades\Http;
 use NoahMedra\PromptBuilder\BuilderInput;
 use NoahMedra\PromptBuilder\BuilderOutput;
-use SebastianBergmann\CodeCoverage\Node\Builder;
 
-class OllamaDriver implements DriverInterface{
+class OllamaDriver implements PromptDriverInterface{
 
 
     public function process(BuilderInput $input) : BuilderOutput{

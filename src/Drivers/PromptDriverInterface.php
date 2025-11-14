@@ -2,11 +2,10 @@
 
 namespace NoahMedra\PromptBuilder\Drivers;
 
-use Illuminate\Support\Facades\Facade;
 use NoahMedra\PromptBuilder\BuilderInput;
 use NoahMedra\PromptBuilder\BuilderOutput;
 
-interface DriverInterface
+interface PromptDriverInterface
 {
     public function process(BuilderInput $input) : BuilderOutput;
 }
