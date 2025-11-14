@@ -80,16 +80,16 @@ class PromptBuilder
     }
 
 
-    public function jsonify(string $json): self
+    public function expectResponseFormat(string $format): self
     {        
-        $decoded = json_decode($json, true);
+        $decoded = json_decode($format, true);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
             throw new Exception('Json format invalide.');
         }
 
         $this->expectJson = true;
-        $this->jsonFormat = $json;
+        $this->jsonFormat = $format;
         return $this;
     }
 
@@ -158,6 +158,7 @@ class PromptBuilder
     private function buildPrompt(): string
     {
         $finalPrompt = $this->getContext(); // Ajoute le contexte si nécessaire
+        $format = is_null($this->jsonFormat) ? 'Votre réponse' : $this->jsonFormat;
 
         $this->instruction("### Attente : La réponse de l'utilisateur doit impérativement être en **JSON**, sans texte supplémentaire.
 
@@ -165,7 +166,7 @@ class PromptBuilder
 
             {
                 \"resume\": \"Un résumé concis de la réponse.\",
-                \"response\": \"$this->jsonFormat\"
+                \"response\": \"$format\"
             }
 
             ". PHP_EOL);
