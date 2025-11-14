@@ -41,7 +41,7 @@ class PromptBuilder
      */
     public function driver(string $driverClass): self
     {
-        if (!class_exists($driverClass) || !is_subclass_of($driverClass, PromptDriverInterface)) {
+        if (!class_exists($driverClass) || !is_subclass_of($driverClass, PromptDriverInterface::class)) {
             throw new \Exception("Le driver spécifié n'existe pas ou ne respecte pas l'interface : {$driverClass}");
         }
 
