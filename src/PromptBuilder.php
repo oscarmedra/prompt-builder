@@ -155,15 +155,15 @@ class PromptBuilder
     private function buildPrompt(): string
     {
         $finalPrompt = $this->getContext(); // Ajoute le contexte si nécessaire
-        $format = is_null($this->jsonFormat) ? 'Votre réponse' : $this->jsonFormat;
+        // $format = is_null($this->jsonFormat) ? 'Votre réponse' : $this->jsonFormat;
 
-        $this->instruction("### Attente : La réponse de l'utilisateur doit impérativement être en **JSON**, sans texte supplémentaire.
+        // $this->instruction("### Attente : La réponse de l'utilisateur doit impérativement être en **JSON**, sans texte supplémentaire.
 
-            Exemple de réponse formatée en JSON :
+        //     Exemple de réponse formatée en JSON :
 
-            $format
+        //     $format
 
-            ". PHP_EOL);
+        //     ". PHP_EOL);
 
         // Si des instructions sont définies, les inclure dans le prompt
         if (!$this->instructions->isEmpty()) {
