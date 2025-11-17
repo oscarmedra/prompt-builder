@@ -180,8 +180,11 @@ $builder->withParams(['lang' => 'en'])
         ->instruction("Provide a clear and concise answer.")
         ->instruction("The response should be in JSON format.")
         ->instruction("Include the following sub-instructions:")
-            ->instruction("Ensure the answer is clear and easy to understand.")
-            ->instruction("Be concise and avoid unnecessary details.")
+        ->when(true, function($builder){
+                $builder
+                    ->instruction("Ensure the answer is clear and easy to understand.")
+                    ->instruction("Be concise and avoid unnecessary details.")
+        })
         ->context("You are an expert in financial analysis.")
         ->ask("What are the main trends in the past three months of my financial data?");
 
