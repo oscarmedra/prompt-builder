@@ -140,10 +140,10 @@ class PromptBuilder
             $this->instruction("
                 Veuillez structurer votre réponse en respectant le format JSON ci-dessous. Les données que vous allez fournir seront utilisées par une application tierce et seront probablement décodées ou traitées comme une ressource de données. Il est donc essentiel que vous respectiez le format indiqué pour garantir une bonne compatibilité avec le système cible.
 
-                [
+                {
                     \"resume\": \"Un résumé succinct de votre réponse, contenant l'essentiel, limité à 200 caractères.\",
-                    \"response\": {$format}
-                ]
+                    \"response\":  \"$format\"
+                }
 
                 ***Assurez-vous que :
                 - Toutes les chaînes de texte contenant des guillemets doivent avoir les guillemets échappés (par exemple, \"votre texte\").
