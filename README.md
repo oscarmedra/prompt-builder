@@ -47,9 +47,10 @@ $builder->instruction("### Financial History")
         ->instruction("We will also review your financial history to identify trends.")
         ->when(
             true,  // This condition is true, so the sub-instructions will be applied
-            function($inst) {
-                $inst->instruction("Here is a summary of your financial history for the last three months.");
-                $inst->instruction("Your balance has fluctuated between X and Y. It seems like you had some unexpected expenses.");
+            function($builder) {
+                $builder->instruction("Here is a summary of your financial history for the last three months.");
+                     ->when(false, fn($ist) => $ist->instruction('It seems there are no significant changes in your financial behavior this month. We’ll continue to monitor this trend for future insights.'))
+                $builder->instruction("Your balance has fluctuated between X and Y. It seems like you had some unexpected expenses.");
             }
         );
 ```
