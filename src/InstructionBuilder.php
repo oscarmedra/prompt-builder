@@ -59,6 +59,20 @@ class InstructionBuilder
     }
 
 
+
+    public function add(string $instructionText, ?Closure $callback = null): self
+    {
+        $ist = new InstructionBuilder($instructionText);
+
+        if ($callback instanceof Closure) {
+            $callback($ist); 
+        }
+
+        $this->instructions->push($ist);
+        return $this;
+    }
+
+
     public function getText() : string{
         return $this->text;
     }
