@@ -7,6 +7,7 @@ class BuilderInput
     public $input;
     public $params;
     protected array $bs4_files = [];  // Tableau pour stocker les fichiers Base64
+    protected $history = [];
 
 
     public function __construct(string $input)
@@ -79,6 +80,16 @@ class BuilderInput
 
 
         return $data;
+    }
+
+
+    public function setHistory($history) : self{
+        $this->history = $history;
+        return $this;
+    }
+
+    public function getHistory() : array{
+        return $this->history;
     }
 }
 

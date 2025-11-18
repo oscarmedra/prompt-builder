@@ -121,6 +121,7 @@ class PromptBuilder
         $prompt = $this->buildPrompt();
         $this->input = new BuilderInput($prompt);
         $this->input->setParams($this->params);
+        $this->input->setHistory($this->history);
         $this->output = $this->driver->process($this->input);
     }
 
