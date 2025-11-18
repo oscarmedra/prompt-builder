@@ -117,7 +117,7 @@ class PromptBuilder
 
 
     private function getContext() {
-        $context = $this->context ? "### Contexte : {$this->context}". PHP_EOL : '';
+        $context = $this->context ? "[#]:Voici le contexte : {$this->context}". PHP_EOL : '';
 
 
         if ($this->use_history == true) {
@@ -126,7 +126,7 @@ class PromptBuilder
 
         
             if (!empty($history)) {
-                $context .= "### Voici l'historique de vos discussions :\n";
+                $context .= "[#]:Voici l'historique de vos discussions :\n";
                 foreach ($history as $entry) {
                     $context .= "User: {$entry['input']}\n You: {$entry['output']}\n";
                 }
@@ -134,19 +134,19 @@ class PromptBuilder
         }
 
 
-        if($this->expectJson == true){
-            $format = is_null($this->jsonFormat) ? 'Votre réponse' : $this->jsonFormat;
+        // if($this->expectJson == true){
+        //     $format = is_null($this->jsonFormat) ? 'Votre réponse' : $this->jsonFormat;
 
-            $this->instruction("
-                Veuillez structurer votre réponse en respectant le format JSON ci-dessous. Les données que vous allez fournir seront utilisées par une application tierce et seront probablement décodées ou traitées comme une ressource de données. Il est donc essentiel que vous respectiez le format indiqué pour garantir une bonne compatibilité avec le système cible.
+        //     $this->instruction("
+        //         Veuillez structurer votre réponse en respectant le format JSON ci-dessous. Les données que vous allez fournir seront utilisées par une application tierce et seront probablement décodées ou traitées comme une ressource de données. Il est donc essentiel que vous respectiez le format indiqué pour garantir une bonne compatibilité avec le système cible.
 
-                $format
+        //         $format
 
-                ***Assurez-vous que :
-                - Toutes les chaînes de texte contenant des guillemets doivent avoir les guillemets échappés (par exemple, \"votre texte\").
-                - Les virgules ne doivent pas apparaître après le dernier élément dans une liste ou un objet.
-            ");
-        }
+        //         ***Assurez-vous que :
+        //         - Toutes les chaînes de texte contenant des guillemets doivent avoir les guillemets échappés (par exemple, \"votre texte\").
+        //         - Les virgules ne doivent pas apparaître après le dernier élément dans une liste ou un objet.
+        //     ");
+        // }
 
         return $context;
     }
@@ -167,7 +167,7 @@ class PromptBuilder
 
         // Si des instructions sont définies, les inclure dans le prompt
         if (!$this->instructions->isEmpty()) {
-            $finalPrompt .= "### Instructions : ". PHP_EOL;
+            $finalPrompt .= "[#]:Voici les instructions que vous devait catégoriquement respecté: ". PHP_EOL;
         }
 
         // Ajout des instructions formatées dans le prompt
@@ -181,7 +181,7 @@ class PromptBuilder
         }
 
         // Si une demande est définie, l'ajouter à la fin du prompt
-        $finalPrompt .= $this->ask ? "### Demande: {$this->ask}\n" : '';
+        $finalPrompt .= $this->ask ? "[#]:Voici la question que vous devait répondre especialement répondre tout en réspéctant les instructions et surtout ne pas oublier le contexte : {$this->ask}\n" : '';
 
         return $finalPrompt;
     }
