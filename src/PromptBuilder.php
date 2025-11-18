@@ -18,6 +18,7 @@ class PromptBuilder
     protected string $context = '';
     private $instructions;
     protected bool $use_history = false; 
+    protected $history = [];
     private $manager;
     private ?string $jsonFormat = null;
     private ?PromptDriverInterface $driver = null;
@@ -93,6 +94,15 @@ class PromptBuilder
         return $this;
     }
 
+
+    public function setHistory(array $history){
+        $this->use_history = true;
+        $this->history = [
+            ...($this->history ?? []),
+            ...($history)
+        ];
+    }
+
     public function ask(string $question): self
     {
         $this->ask = $question;
@@ -116,32 +126,34 @@ class PromptBuilder
 
 
 
-    private function getContext() {
-        $context = $this->context ? "[#]:Voici le contexte : {$this->context}". PHP_EOL : '';
+    private function getContext(): string{
+        // Si un contexte est défini, on l'ajoute
+        $context = $this->context ? "[#]:Voici le contexte : {$this->context}" . PHP_EOL : '';
 
+        // Si l'historique des conversations doit être utilisé
+        if ($this->use_history === true) {
+            // $history = $this->manager->getHistory();
+            $history = $this->history;
 
-        if ($this->use_history == true) {
-
-            $history = $this->manager->getHistory();
-
-        
+            // Si l'historique est non vide, on l'ajoute au contexte
             if (!empty($history)) {
                 $context .= "[#]:Voici l'historique de vos discussions :\n";
                 foreach ($history as $entry) {
-                    $context .= "User: {$entry['input']}\n You: {$entry['output']}\n";
+                    $context .= "User: {$entry['input']}\nYou: {$entry['output']}\n";
                 }
             }
         }
 
-
-        if($this->expectJson == true){
+        // Si le format JSON est attendu, on ajoute une instruction pour cela
+        if ($this->expectJson === true) {
             $format = is_null($this->jsonFormat) ? 'Votre réponse' : $this->jsonFormat;
 
+            // Ajout des instructions pour garantir un format JSON correct
             $this->instruction("
-                Veuillez structurer votre réponse en respectant le format JSON ci-dessous. Les données que vous allez fournir seront utilisées par une application tierce et seront probablement décodées ou traitées comme une ressource de données. Il est donc essentiel que vous respectiez le format indiqué pour garantir une bonne compatibilité avec le système cible.
-                ***Assurez-vous que :
-                - Toutes les chaînes de texte contenant des guillemets doivent avoir les guillemets échappés (par exemple, \"votre texte\").
-                - Les virgules ne doivent pas apparaître après le dernier élément dans une liste ou un objet.
+                Veuillez structurer votre réponse en respectant le format JSON ci-dessous. Les données fournies seront utilisées par une application tierce, il est donc essentiel de respecter ce format pour garantir une bonne compatibilité avec le système cible.
+                ***Instructions :
+                - Toutes les chaînes de texte contenant des guillemets doivent être échappées (par exemple, \"votre texte\").
+                - Ne mettez pas de virgule après le dernier élément dans une liste ou un objet.
                 - Format de réponse attendu : $format
             ");
         }
@@ -149,40 +161,33 @@ class PromptBuilder
         return $context;
     }
 
-
     private function buildPrompt(): string
     {
-        $finalPrompt = $this->getContext(); // Ajoute le contexte si nécessaire
-        // $format = is_null($this->jsonFormat) ? 'Votre réponse' : $this->jsonFormat;
+        // Commence par ajouter le contexte si nécessaire
+        $finalPrompt = $this->getContext();
 
-        // $this->instruction("### Attente : La réponse de l'utilisateur doit impérativement être en **JSON**, sans texte supplémentaire.
-
-        //     Exemple de réponse formatée en JSON :
-
-        //     $format
-
-        //     ". PHP_EOL);
-
-        // Si des instructions sont définies, les inclure dans le prompt
+        // Si des instructions sont définies, on les inclut dans le prompt
         if (!$this->instructions->isEmpty()) {
-            $finalPrompt .= "[#]:Voici les instructions que vous devait catégoriquement respecté: ". PHP_EOL;
-        }
-
-        // Ajout des instructions formatées dans le prompt
-        foreach ($this->instructions as $instruction) {
-            $depth = 1;
-            // On assure que le format de chaque instruction est bien respecté
-            $formattedInstruction = $instruction->formatToText($depth);
+            $finalPrompt .= "[#]:Voici les instructions que vous devez impérativement respecter : " . PHP_EOL;
             
-            // Ajout de l'instruction formatée au prompt final
-            $finalPrompt .= $formattedInstruction;
+            // Ajouter chaque instruction, formatée pour assurer qu'elle est bien suivie
+            foreach ($this->instructions as $instruction) {
+                $depth = 1;  // Si tu as une logique de profondeur, tu peux ajuster cette variable
+                $formattedInstruction = $instruction->formatToText($depth);
+
+                // Ajout de l'instruction formatée au prompt final
+                $finalPrompt .= $formattedInstruction . PHP_EOL;
+            }
         }
 
-        // Si une demande est définie, l'ajouter à la fin du prompt
-        $finalPrompt .= $this->ask ? "[#]:Voici la question que vous devait répondre especialement répondre tout en réspéctant les instructions et surtout ne pas oublier le contexte : {$this->ask}\n" : '';
+        // Si une question est définie, elle est ajoutée à la fin du prompt
+        if ($this->ask) {
+            $finalPrompt .= "[#]:Voici la question à laquelle vous devez répondre, en respectant les instructions et le contexte : {$this->ask}" . PHP_EOL;
+        }
 
         return $finalPrompt;
     }
+
 
     public function when(bool $condition, Closure $ifc, ?Closure $elsec = null): self{
         if ($condition) {
