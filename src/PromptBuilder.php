@@ -101,6 +101,8 @@ class PromptBuilder
             ...($this->history ?? []),
             ...($history)
         ];
+
+        return $this;
     }
 
     public function ask(string $question): self
