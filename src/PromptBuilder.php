@@ -134,19 +134,17 @@ class PromptBuilder
         }
 
 
-        // if($this->expectJson == true){
-        //     $format = is_null($this->jsonFormat) ? 'Votre réponse' : $this->jsonFormat;
+        if($this->expectJson == true){
+            $format = is_null($this->jsonFormat) ? 'Votre réponse' : $this->jsonFormat;
 
-        //     $this->instruction("
-        //         Veuillez structurer votre réponse en respectant le format JSON ci-dessous. Les données que vous allez fournir seront utilisées par une application tierce et seront probablement décodées ou traitées comme une ressource de données. Il est donc essentiel que vous respectiez le format indiqué pour garantir une bonne compatibilité avec le système cible.
-
-        //         $format
-
-        //         ***Assurez-vous que :
-        //         - Toutes les chaînes de texte contenant des guillemets doivent avoir les guillemets échappés (par exemple, \"votre texte\").
-        //         - Les virgules ne doivent pas apparaître après le dernier élément dans une liste ou un objet.
-        //     ");
-        // }
+            $this->instruction("
+                Veuillez structurer votre réponse en respectant le format JSON ci-dessous. Les données que vous allez fournir seront utilisées par une application tierce et seront probablement décodées ou traitées comme une ressource de données. Il est donc essentiel que vous respectiez le format indiqué pour garantir une bonne compatibilité avec le système cible.
+                ***Assurez-vous que :
+                - Toutes les chaînes de texte contenant des guillemets doivent avoir les guillemets échappés (par exemple, \"votre texte\").
+                - Les virgules ne doivent pas apparaître après le dernier élément dans une liste ou un objet.
+                - Format de réponse attendu : $format
+            ");
+        }
 
         return $context;
     }
