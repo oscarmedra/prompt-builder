@@ -134,18 +134,18 @@ class PromptBuilder
         $context = $this->context ? "[#]:Voici le contexte : {$this->context}" . PHP_EOL : '';
 
         // Si l'historique des conversations doit être utilisé
-        if ($this->use_history === true) {
-            // $history = $this->manager->getHistory();
-            $history = $this->history;
+        // if ($this->use_history === true) {
+        //     // $history = $this->manager->getHistory();
+        //     $history = $this->history;
 
-            // Si l'historique est non vide, on l'ajoute au contexte
-            if (!empty($history)) {
-                $context .= "[#]:Voici l'historique de vos discussions :\n";
-                foreach ($history as $entry) {
-                    $context .= "User: {$entry['input']}\nYou: {$entry['output']}\n";
-                }
-            }
-        }
+        //     // Si l'historique est non vide, on l'ajoute au contexte
+        //     if (!empty($history)) {
+        //         $context .= "[#]:Voici l'historique de vos discussions :\n";
+        //         foreach ($history as $entry) {
+        //             $context .= "User: {$entry['input']}\nYou: {$entry['output']}\n";
+        //         }
+        //     }
+        // }
 
         // Si le format JSON est attendu, on ajoute une instruction pour cela
         if ($this->expectJson === true) {
