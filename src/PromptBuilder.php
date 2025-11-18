@@ -146,16 +146,21 @@ class PromptBuilder
 
         // Si le format JSON est attendu, on ajoute une instruction pour cela
         if ($this->expectJson === true) {
-            $format = is_null($this->jsonFormat) ? 'Votre réponse' : $this->jsonFormat;
+            $format = $this->jsonFormat;
 
             // Ajout des instructions pour garantir un format JSON correct
-            $this->instruction("
-                Veuillez structurer votre réponse en respectant le format JSON ci-dessous. Les données fournies seront utilisées par une application tierce, il est donc essentiel de respecter ce format pour garantir une bonne compatibilité avec le système cible.
-                ***Instructions :
-                - Toutes les chaînes de texte contenant des guillemets doivent être échappées (par exemple, \"votre texte\").
-                - Ne mettez pas de virgule après le dernier élément dans une liste ou un objet.
-                - Format de réponse attendu : $format
-            ");
+            $this->instruction(
+                "Vous devez absolument structurer votre réponse en JSON valide. 
+                Ce JSON sera traité par une application tierce et décodé automatiquement ; 
+                le moindre écart de format entraînera une erreur de parsing.",
+                function($ist) use ($format) {
+
+                    $ist->add("Toutes les chaînes de texte contenant des guillemets doivent être échappées correctement (par exemple : \"texte\")");
+                    $ist->add("Aucune virgule ne doit apparaître après le dernier élément d'une liste ou d'un objet JSON");
+                    $ist->add("Le respect strict du format est obligatoire, car le résultat sera décodé par une fonction JSON et doit donc être parfaitement valide");
+                    $ist->add("Voici le format JSON EXACT attendu : $format");
+                }
+            );
         }
 
         return $context;
