@@ -60,6 +60,7 @@ class PromptBuilder
     }
 
 
+    
     public function useHistory(bool $status = true) : self{
         $this->use_history = $status;
         return $this;
