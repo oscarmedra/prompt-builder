@@ -1,6 +1,6 @@
 {
     "name": "noah-medra/prompt-builder",
-    "version": "1.0.1",
+    "version": "1.0.0",
     "description": "Laravel package to build dynamic AI prompts",
     "type": "library",
     "license": "MIT",
