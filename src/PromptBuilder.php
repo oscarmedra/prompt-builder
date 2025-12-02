@@ -27,7 +27,8 @@ class PromptBuilder
     {   
         $this->instructions = collect([]);
         $this->manager = new HistoryManager();
-        $this->driver = new OllamaDriver();
+        $this->driver = new \NoahMedra\PromptBuilder\Drivers\OllamaDriver();
+
     }
 
 
