@@ -1,12 +1,10 @@
 <?php
 namespace NoahMedra\PromptBuilder;
 
-use App\Providers\PromptDriverServiceProvider;
 use Closure;
 use Exception;
 use NoahMedra\PromptBuilder\BuilderOutput;
 use NoahMedra\PromptBuilder\BuilderInput;
-use NoahMedra\PromptBuilder\Drivers\HuggingFaceDriver;
 use NoahMedra\PromptBuilder\Drivers\OllamaDriver;
 use NoahMedra\PromptBuilder\Drivers\PromptDriverInterface;
 
@@ -60,7 +58,7 @@ class PromptBuilder
     }
 
 
-    
+
     public function useHistory(bool $status = true) : self{
         $this->use_history = $status;
         return $this;
