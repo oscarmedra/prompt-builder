@@ -1,0 +1,25 @@
+# Dependencies (a library ships source, not vendored deps)
+/vendor/
+
+# Composer lock is intentionally not committed for a library:
+# consumers resolve against their own constraints. See README.
+/composer.lock
+
+# PHPUnit
+.phpunit.result.cache
+.phpunit.cache/
+
+# Tooling caches
+/.php-cs-fixer.cache
+/.pint.cache
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Editors / OS
+/.idea/
+/.vscode/
+.DS_Store
+*.log
