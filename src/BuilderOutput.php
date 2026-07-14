@@ -17,6 +17,12 @@ class BuilderOutput{
 
 
 
+    /** The raw, undecoded response string as received from the driver. */
+    public function getRaw(): string {
+        return $this->output;
+    }
+
+
     public function get(string $path){
         $keys = explode('.', $path);
 

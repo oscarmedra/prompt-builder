@@ -7,6 +7,8 @@ use Exception;
 use NoahMedra\PromptBuilder\Drivers\OllamaDriver;
 use NoahMedra\PromptBuilder\Drivers\PromptDriverInterface;
 use NoahMedra\PromptBuilder\Examples\Example;
+use NoahMedra\PromptBuilder\History\HistoryStoreInterface;
+use NoahMedra\PromptBuilder\History\InMemoryHistoryStore;
 use NoahMedra\PromptBuilder\Instructions\Instruction;
 use NoahMedra\PromptBuilder\Rendering\RendererInterface;
 use NoahMedra\PromptBuilder\Rendering\TextRenderer;
@@ -28,6 +30,8 @@ class PromptBuilder
     private ?PromptDriverInterface $driver = null;
 
     private ?BuilderOutput $output = null;
+
+    private ?HistoryStoreInterface $historyStore = null;
 
     public function __construct()
     {
@@ -118,10 +122,39 @@ class PromptBuilder
         return $this->withParams($params);
     }
 
-    /** @param array<int, array{role: string, content: string}> $history */
+    /**
+     * Turn on conversation memory backed by a store. Prior turns already
+     * in the store are loaded into the prompt immediately, and process()
+     * will append this turn's question + response back into the store so
+     * the NEXT builder using the same store sees this exchange.
+     *
+     * Defaults to an in-memory store (framework-free, works anywhere). Pass
+     * History\Laravel\CacheHistoryStore to persist across requests.
+     */
+    public function useHistory(?HistoryStoreInterface $store = null): self
+    {
+        $this->historyStore = $store ?? new InMemoryHistoryStore();
+        $this->spec->history = [...$this->spec->history, ...$this->historyStore->all()];
+        return $this;
+    }
+
+    /**
+     * Manually seed prior turns. Always feeds the current prompt; if a
+     * history store is active (via useHistory()), the turns are recorded
+     * in it too.
+     *
+     * @param array<int, array{role: string, content: string}> $history
+     */
     public function setHistory(array $history): self
     {
         $this->spec->history = [...$this->spec->history, ...$history];
+
+        if ($this->historyStore !== null) {
+            foreach ($history as $message) {
+                $this->historyStore->push($message['role'] ?? 'user', $message['content'] ?? '');
+            }
+        }
+
         return $this;
     }
 
@@ -188,7 +221,31 @@ class PromptBuilder
     {
         $this->driver ??= new OllamaDriver();
         $this->output = $this->driver->process($this->spec);
+
+        $this->recordExchange();
+
         return $this;
+    }
+
+    /**
+     * When history is enabled, append this turn to the store: the question
+     * as a user message, and the model reply as an assistant message. For
+     * chat-shaped responses we store the extracted `message.content`; for
+     * anything else we fall back to the raw response body so the store is
+     * never silently empty.
+     */
+    private function recordExchange(): void
+    {
+        if ($this->historyStore === null || $this->output === null) {
+            return;
+        }
+
+        if ($this->spec->question !== null && $this->spec->question !== '') {
+            $this->historyStore->push('user', $this->spec->question);
+        }
+
+        $assistant = $this->output->get('message.content');
+        $this->historyStore->push('assistant', is_string($assistant) ? $assistant : $this->output->getRaw());
     }
 
     public function getOutput(): ?BuilderOutput
