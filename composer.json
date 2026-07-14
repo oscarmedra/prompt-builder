@@ -32,6 +32,16 @@
         "Tests\\": "tests/"
       }
     },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "NoahMedra\\PromptBuilder\\PromptBuilderServiceProvider"
+            ],
+            "aliases": {
+                "PromptBuilder": "NoahMedra\\PromptBuilder\\Facades\\PromptBuilder"
+            }
+        }
+    },
     "config": {
         "allow-plugins": {
             "pestphp/pest-plugin": true
