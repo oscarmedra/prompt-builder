@@ -2,35 +2,38 @@
 
 namespace NoahMedra\PromptBuilder\Drivers;
 
-use Exception;
-use Illuminate\Support\Facades\Http;
+use GuzzleHttp\Client;
+use GuzzleHttp\ClientInterface;
 use NoahMedra\PromptBuilder\BuilderOutput;
 use NoahMedra\PromptBuilder\PromptSpec;
 use NoahMedra\PromptBuilder\Rendering\ChatMessagesRenderer;
 use NoahMedra\PromptBuilder\Rendering\RendererInterface;
+use Throwable;
 
 /**
- * Sends a PromptSpec to a local Ollama /api/chat endpoint.
+ * Framework-agnostic Ollama driver: talks to a local /api/chat endpoint
+ * using Guzzle directly, so it works in a plain PHP script with no booted
+ * Laravel application.
  *
- * Fixes vs. the original implementation:
- *  - actually renders and sends the built prompt (it previously sent a
- *    hardcoded "Bonjour toi" message, discarding everything the caller
- *    composed with PromptBuilder)
- *  - uses a proper chat "messages" array via ChatMessagesRenderer instead
- *    of flattening everything into one user message
- *  - drops the incorrect `Content-Type: application/x-www-form-urlencoded`
- *    header on what is actually a JSON request body
- *  - has a configurable timeout instead of blocking indefinitely if
- *    Ollama is unreachable
+ * If you're inside a Laravel app and want Http::fake() in your tests, use
+ * Drivers\Laravel\OllamaDriver instead — it is behaviourally identical but
+ * built on the Http facade.
+ *
+ * A Guzzle client can be injected (mainly for testing with a MockHandler);
+ * otherwise a default client is created.
  */
 class OllamaDriver implements PromptDriverInterface
 {
+    private ClientInterface $client;
+
     public function __construct(
         private readonly string $model = 'llama3.1',
         private readonly string $endpoint = 'http://localhost:11434/api/chat',
         private readonly RendererInterface $renderer = new ChatMessagesRenderer(),
         private readonly int $timeoutSeconds = 30,
+        ?ClientInterface $client = null,
     ) {
+        $this->client = $client ?? new Client();
     }
 
     public function process(PromptSpec $spec): BuilderOutput
@@ -38,20 +41,18 @@ class OllamaDriver implements PromptDriverInterface
         $messages = $this->renderer->render($spec);
 
         try {
-            $response = Http::acceptJson()
-                ->timeout($this->timeoutSeconds)
-                ->post($this->endpoint, [
+            $response = $this->client->request('POST', $this->endpoint, [
+                'headers' => ['Accept' => 'application/json'],
+                'timeout' => $this->timeoutSeconds,
+                'json' => [
                     'model' => $this->model,
                     'stream' => false,
                     'messages' => $messages,
-                ]);
+                ],
+            ]);
 
-            if ($response->failed()) {
-                throw new Exception($response->body());
-            }
-
-            return new BuilderOutput($response->body());
-        } catch (Exception $e) {
+            return new BuilderOutput((string) $response->getBody());
+        } catch (Throwable $e) {
             return new BuilderOutput(json_encode(['error' => $e->getMessage()]));
         }
     }
