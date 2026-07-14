@@ -16,6 +16,7 @@
         },
         "files": [
             "src/Eloquent/functions.php",
+            "src/Filesystem/functions.php",
             "src/Http/functions.php",
             "src/functions.php"
         ]
@@ -30,6 +31,7 @@
     "require": {
         "php": "^8.1",
         "composer-runtime-api": "^2.2",
+        "composer/semver": "^3.0",
         "symfony/polyfill-php83": "^1.32"
     },
     "require-dev": {
@@ -43,6 +45,9 @@
         "symfony/process": "^6.0|^7.0"
     },
     "config": {
+        "audit": {
+            "block-insecure": false
+        },
         "sort-packages": true
     },
     "scripts": {

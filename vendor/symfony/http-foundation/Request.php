@@ -351,10 +351,21 @@ class Request
         $server['PATH_INFO'] = '';
         $server['REQUEST_METHOD'] = strtoupper($method);
 
+        if (($i = strcspn($uri, ':/?#')) && ':' === ($uri[$i] ?? null) && (strspn($uri, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+-.') !== $i || strcspn($uri, 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'))) {
+            throw new BadRequestException('Invalid URI: Scheme is malformed.');
+        }
         if (false === $components = parse_url(\strlen($uri) !== strcspn($uri, '?#') ? $uri : $uri.'#')) {
             throw new BadRequestException('Invalid URI.');
         }
 
+        $part = ($components['user'] ?? '').':'.($components['pass'] ?? '');
+
+        if (':' !== $part && \strlen($part) !== strcspn($part, '[]')) {
+            throw new BadRequestException('Invalid URI: Userinfo is malformed.');
+        }
+        if (($part = $components['host'] ?? '') && !self::isHostValid($part)) {
+            throw new BadRequestException('Invalid URI: Host is malformed.');
+        }
         if (false !== ($i = strpos($uri, '\\')) && $i < strcspn($uri, '?#')) {
             throw new BadRequestException('Invalid URI: A URI cannot contain a backslash.');
         }
@@ -393,8 +404,16 @@ class Request
             $server['PHP_AUTH_PW'] = $components['pass'];
         }
 
-        if (!isset($components['path'])) {
+        if ('' === $path = $components['path'] ?? '') {
             $components['path'] = '/';
+        } elseif (!isset($components['scheme']) && !isset($components['host']) && '/' !== $path[0]) {
+            if (false !== $pos = strpos($path, '/')) {
+                $path = substr($path, 0, $pos);
+            }
+
+            if (str_contains($path, ':')) {
+                throw new BadRequestException('Invalid URI: Path is malformed.');
+            }
         }
 
         switch (strtoupper($method)) {
@@ -595,7 +614,7 @@ class Request
      */
     public static function setTrustedProxies(array $proxies, int $trustedHeaderSet)
     {
-        self::$trustedProxies = array_reduce($proxies, function ($proxies, $proxy) {
+        self::$trustedProxies = array_reduce($proxies, static function ($proxies, $proxy) {
             if ('REMOTE_ADDR' !== $proxy) {
                 $proxies[] = $proxy;
             } elseif (isset($_SERVER['REMOTE_ADDR'])) {
@@ -638,7 +657,7 @@ class Request
      */
     public static function setTrustedHosts(array $hostPatterns)
     {
-        self::$trustedHostPatterns = array_map(fn ($hostPattern) => \sprintf('{%s}i', $hostPattern), $hostPatterns);
+        self::$trustedHostPatterns = array_map(static fn ($hostPattern) => \sprintf('{%s}i', $hostPattern), $hostPatterns);
         // we need to reset trusted hosts on trusted host patterns change
         self::$trustedHosts = [];
     }
@@ -817,10 +836,6 @@ class Request
      * being the original client, and each successive proxy that passed the request
      * adding the IP address where it received the request from.
      *
-     * If your reverse proxy uses a different header name than "X-Forwarded-For",
-     * ("Client-Ip" for instance), configure it via the $trustedHeaderSet
-     * argument of the Request::setTrustedProxies() method instead.
-     *
      * @see getClientIps()
      * @see https://wikipedia.org/wiki/X-Forwarded-For
      */
@@ -846,7 +861,7 @@ class Request
      *
      * Suppose this request is instantiated from /mysite on localhost:
      *
-     *  * http://localhost/mysite              returns an empty string
+     *  * http://localhost/mysite              returns '/'
      *  * http://localhost/mysite/about        returns '/about'
      *  * http://localhost/mysite/enco%20ded   returns '/enco%20ded'
      *  * http://localhost/mysite/about?var=1  returns '/about'
@@ -1151,10 +1166,8 @@ class Request
         // host is lowercase as per RFC 952/2181
         $host = strtolower(preg_replace('/:\d+$/', '', trim($host)));
 
-        // as the host can come from the user (HTTP_HOST and depending on the configuration, SERVER_NAME too can come from the user)
-        // check that it does not contain forbidden characters (see RFC 952 and RFC 2181)
-        // use preg_replace() instead of preg_match() to prevent DoS attacks with long host names
-        if ($host && '' !== preg_replace('/(?:^\[)?[a-zA-Z0-9-:\]_]+\.?/', '', $host)) {
+        // the host can come from the user (HTTP_HOST and depending on the configuration, SERVER_NAME too can come from the user)
+        if ($host && !self::isHostValid($host)) {
             if (!$this->isHostValid) {
                 return '';
             }
@@ -1298,13 +1311,20 @@ class Request
             static::initializeFormats();
         }
 
+        $exactFormat = null;
+        $canonicalFormat = null;
+
         foreach (static::$formats as $format => $mimeTypes) {
-            if (\in_array($mimeType, (array) $mimeTypes)) {
-                return $format;
+            if (\in_array($mimeType, $mimeTypes, true)) {
+                $exactFormat = $format;
             }
-            if (null !== $canonicalMimeType && \in_array($canonicalMimeType, (array) $mimeTypes)) {
-                return $format;
+            if (null !== $canonicalMimeType && \in_array($canonicalMimeType, $mimeTypes, true)) {
+                $canonicalFormat = $format;
             }
+        }
+
+        if ($format = $exactFormat ?? $canonicalFormat) {
+            return $format;
         }
 
         return null;
@@ -1323,7 +1343,7 @@ class Request
             static::initializeFormats();
         }
 
-        static::$formats[$format] = \is_array($mimeTypes) ? $mimeTypes : [$mimeTypes];
+        static::$formats[$format ?? ''] = (array) $mimeTypes;
     }
 
     /**
@@ -1917,9 +1937,8 @@ class Request
         }
 
         $pathInfo = substr($requestUri, \strlen($baseUrl));
-        if (false === $pathInfo || '' === $pathInfo) {
-            // If substr() returns false then PATH_INFO is set to an empty string
-            return '/';
+        if (false === $pathInfo || '' === $pathInfo || '/' !== $pathInfo[0]) {
+            return '/'.$pathInfo;
         }
 
         return $pathInfo;
@@ -2127,5 +2146,22 @@ class Request
         }
 
         return $this->isIisRewrite;
+    }
+
+    /**
+     * See https://url.spec.whatwg.org/.
+     */
+    private static function isHostValid(string $host): bool
+    {
+        if ('[' === $host[0]) {
+            return ']' === $host[-1] && filter_var(substr($host, 1, -1), \FILTER_VALIDATE_IP, \FILTER_FLAG_IPV6);
+        }
+
+        if (preg_match('/\.[0-9]++\.?$/D', $host)) {
+            return null !== filter_var($host, \FILTER_VALIDATE_IP, \FILTER_FLAG_IPV4 | \FILTER_NULL_ON_FAILURE);
+        }
+
+        // use preg_replace() instead of preg_match() to prevent DoS attacks with long host names
+        return '' === preg_replace('/[-a-zA-Z0-9_]++\.?/', '', $host);
     }
 }
