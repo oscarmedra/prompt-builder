@@ -10,8 +10,7 @@ class BuilderOutput{
     public function __construct(string $output) {
         $this->output = $output;
         if($this->isValidJson()){
-            $this->data = json_decode($this->output, true);
-            $this->data = json_decode($output);
+            $this->data = json_decode($this->output);
         }
     }
 

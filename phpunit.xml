@@ -4,7 +4,9 @@
          colors="true"
          stopOnFailure="false">
 
-    <ini name="error_reporting" value="E_ALL & ~E_DEPRECATED" />
+    <php>
+        <ini name="error_reporting" value="E_ALL &amp; ~E_DEPRECATED" />
+    </php>
 
 
     <testsuites>
@@ -14,7 +16,9 @@
     </testsuites>
 
     <coverage>
-        <include path="src/" />
+        <include>
+            <directory suffix=".php">src</directory>
+        </include>
     </coverage>
 
 </phpunit>

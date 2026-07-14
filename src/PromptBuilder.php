@@ -1,232 +1,198 @@
 <?php
+
 namespace NoahMedra\PromptBuilder;
 
 use Closure;
 use Exception;
-use NoahMedra\PromptBuilder\BuilderOutput;
-use NoahMedra\PromptBuilder\BuilderInput;
 use NoahMedra\PromptBuilder\Drivers\OllamaDriver;
 use NoahMedra\PromptBuilder\Drivers\PromptDriverInterface;
+use NoahMedra\PromptBuilder\Examples\Example;
+use NoahMedra\PromptBuilder\Instructions\Instruction;
+use NoahMedra\PromptBuilder\Rendering\RendererInterface;
+use NoahMedra\PromptBuilder\Rendering\TextRenderer;
 
+/**
+ * Fluent API for COMPOSING a prompt. Every method here only touches
+ * the internal PromptSpec — none of them do any I/O, and none of them
+ * know anything about a specific LLM API.
+ *
+ * Execution (driver()/process()/getOutput()) is a thin, separate layer
+ * bolted on top: it hands the finished PromptSpec to a driver and does
+ * nothing else. You can call toPrompt() to inspect/debug the composed
+ * prompt without ever touching a driver.
+ */
 class PromptBuilder
 {
-    protected $params = [];
-    protected string $ask;
-    protected bool $expectJson = false;
-    protected string $context = '';
-    private $instructions;
-    protected bool $use_history = false; 
-    protected $history = [];
-    private $manager;
-    private ?string $jsonFormat = null;
+    private PromptSpec $spec;
+
     private ?PromptDriverInterface $driver = null;
-    private ?BuilderInput $input;
-    private ?BuilderOutput $output;
+
+    private ?BuilderOutput $output = null;
 
     public function __construct()
-    {   
-        $this->instructions = collect([]);
-        $this->manager = new HistoryManager();
-        $this->driver = new \NoahMedra\PromptBuilder\Drivers\OllamaDriver();
-
-    }
-
-
-
-    /**
-     * Permet de définir dynamiquement quel driver utiliser.
-     *
-     * @param string $driverClass
-     * @return $this
-     */
-    public function driver(string $driverClass): self
     {
-        if (!class_exists($driverClass) || !is_subclass_of($driverClass, PromptDriverInterface::class)) {
-            throw new \Exception("Le driver spécifié n'existe pas ou ne respecte pas l'interface : {$driverClass}");
-        }
-
-        $this->driver = new $driverClass();  // Instanciation dynamique
-
-        return $this;
+        $this->spec = new PromptSpec();
     }
-    
-
-    
 
     public static function make(): self
     {
         return new self();
     }
 
+    // ---------------------------------------------------------------
+    // Composition — pure, no I/O
+    // ---------------------------------------------------------------
 
-
-    public function useHistory(bool $status = true) : self{
-        $this->use_history = $status;
+    public function persona(string $text): self
+    {
+        $this->spec->persona = $text;
         return $this;
     }
 
-    public function withParams(array $params){
-        $this->params = $params;
+    public function context(string $context): self
+    {
+        $this->spec->context = $context;
         return $this;
     }
 
-    // Méthode pour ajouter des instructions directement
-    public function instruction(string $instructionText, ?Closure $callback = null): self{
-        $instruction = new InstructionBuilder($instructionText);
-        if($callback instanceof Closure){
+    /** A neutral instruction, same as v1's instruction(). */
+    public function instruction(string $text, ?Closure $callback = null): self
+    {
+        $this->spec->instructions[] = $this->buildInstruction($text, Instruction::TYPE_GENERAL, $callback);
+        return $this;
+    }
+
+    /** A positive constraint, rendered with a "[Obligatoire]" marker. */
+    public function must(string $text, ?Closure $callback = null): self
+    {
+        $this->spec->instructions[] = $this->buildInstruction($text, Instruction::TYPE_MUST, $callback);
+        return $this;
+    }
+
+    /** A negative constraint, rendered with an "[Interdit]" marker. */
+    public function mustNot(string $text, ?Closure $callback = null): self
+    {
+        $this->spec->instructions[] = $this->buildInstruction($text, Instruction::TYPE_MUST_NOT, $callback);
+        return $this;
+    }
+
+    private function buildInstruction(string $text, string $type, ?Closure $callback): Instruction
+    {
+        $instruction = new Instruction($text, $type);
+
+        if ($callback instanceof Closure) {
             $callback($instruction);
         }
-        $this->instructions->push($instruction);
+
+        return $instruction;
+    }
+
+    /** Add a few-shot example (input/expected output) to guide the model. */
+    public function example(string $input, string $output): self
+    {
+        $this->spec->examples[] = new Example($input, $output);
         return $this;
     }
 
-
-    public function expectResponseFormat(string $format): self
-    {        
-        $decoded = json_decode($format, true);
+    public function expectResponseFormat(string $jsonFormat): self
+    {
+        json_decode($jsonFormat);
 
         if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new Exception('Json format invalide.');
+            throw new Exception('Format JSON invalide.');
         }
 
-        $this->expectJson = true;
-        $this->jsonFormat = $format;
+        $this->spec->outputFormat = $jsonFormat;
         return $this;
     }
 
+    /** Values usable as {placeholder} inside any text passed above. */
+    public function withParams(array $params): self
+    {
+        $this->spec->params = $params;
+        return $this;
+    }
 
-    public function setHistory(array $history){
-        $this->use_history = true;
-        $this->history = [
-            ...($this->history ?? []),
-            ...($history)
-        ];
+    public function setParams(array $params): self
+    {
+        return $this->withParams($params);
+    }
 
+    /** @param array<int, array{role: string, content: string}> $history */
+    public function setHistory(array $history): self
+    {
+        $this->spec->history = [...$this->spec->history, ...$history];
         return $this;
     }
 
     public function ask(string $question): self
     {
-        $this->ask = $question;
+        $this->spec->question = $question;
         return $this;
     }
 
-
-    public function context(string $context): self
+    public function when(bool $condition, Closure $ifTrue, ?Closure $ifFalse = null): self
     {
-        $this->context = $context;
-        return $this;
-    }
-
-    public function process()
-    {
-        $prompt = $this->buildPrompt();
-        $this->input = new BuilderInput($prompt);
-        $this->input->setParams($this->params);
-        $this->input->setHistory($this->history);
-        $this->output = $this->driver->process($this->input);
-    }
-
-
-
-    private function getContext(): string{
-        // Si un contexte est défini, on l'ajoute
-        $context = $this->context ? "[#]:Voici le contexte : {$this->context}" . PHP_EOL : '';
-
-        // Si l'historique des conversations doit être utilisé
-        // if ($this->use_history === true) {
-        //     // $history = $this->manager->getHistory();
-        //     $history = $this->history;
-
-        //     // Si l'historique est non vide, on l'ajoute au contexte
-        //     if (!empty($history)) {
-        //         $context .= "[#]:Voici l'historique de vos discussions :\n";
-        //         foreach ($history as $entry) {
-        //             $context .= "User: {$entry['input']}\nYou: {$entry['output']}\n";
-        //         }
-        //     }
-        // }
-
-        // Si le format JSON est attendu, on ajoute une instruction pour cela
-        if ($this->expectJson === true) {
-            $format = $this->jsonFormat;
-
-            // Ajout des instructions pour garantir un format JSON correct
-            $this->instruction(
-                "Vous devez absolument structurer votre réponse en JSON valide. 
-                Ce JSON sera traité par une application tierce et décodé automatiquement ; 
-                le moindre écart de format entraînera une erreur de parsing.",
-                function($ist) use ($format) {
-
-                    $ist->add("Toutes les chaînes de texte contenant des guillemets doivent être échappées correctement (par exemple : \"texte\")");
-                    $ist->add("Aucune virgule ne doit apparaître après le dernier élément d'une liste ou d'un objet JSON");
-                    $ist->add("Le respect strict du format est obligatoire, car le résultat sera décodé par une fonction JSON et doit donc être parfaitement valide");
-                    $ist->add("Voici le format JSON EXACT attendu : $format");
-                }
-            );
-        }
-
-        return $context;
-    }
-
-    private function buildPrompt(): string
-    {
-        // Commence par ajouter le contexte si nécessaire
-        $finalPrompt = $this->getContext();
-
-        // Si des instructions sont définies, on les inclut dans le prompt
-        if (!$this->instructions->isEmpty()) {
-            $finalPrompt .= "[#]:Voici les instructions que vous devez impérativement respecter : " . PHP_EOL;
-            
-            // Ajouter chaque instruction, formatée pour assurer qu'elle est bien suivie
-            foreach ($this->instructions as $instruction) {
-                $depth = 1;  // Si tu as une logique de profondeur, tu peux ajuster cette variable
-                $formattedInstruction = $instruction->formatToText($depth);
-
-                // Ajout de l'instruction formatée au prompt final
-                $finalPrompt .= $formattedInstruction . PHP_EOL;
-            }
-        }
-
-        // Si une question est définie, elle est ajoutée à la fin du prompt
-        if ($this->ask) {
-            $finalPrompt .= "[#]:Voici la question à laquelle vous devez répondre, en respectant les instructions et le contexte : {$this->ask}" . PHP_EOL;
-        }
-
-        return $finalPrompt;
-    }
-
-
-    public function when(bool $condition, Closure $ifc, ?Closure $elsec = null): self{
         if ($condition) {
-            $ifc($this);
-        } elseif ($elsec) {
-            $elsec($this);
+            $ifTrue($this);
+        } elseif ($ifFalse) {
+            $ifFalse($this);
         }
-        
+
         return $this;
     }
 
+    /** Escape hatch to the raw data object, e.g. for a custom Renderer. */
+    public function getSpec(): PromptSpec
+    {
+        return $this->spec;
+    }
 
+    /**
+     * Renders the composed prompt WITHOUT sending it anywhere. This is
+     * the preview/debug tool: iterate on prompt quality for free.
+     *
+     * @return string|array<int, array{role: string, content: string}>
+     */
+    public function toPrompt(?RendererInterface $renderer = null): string|array
+    {
+        $renderer ??= new TextRenderer();
+        return $renderer->render($this->spec);
+    }
 
-    public function setInput(BuilderInput $input) : self{
-        $this->input = $input;
+    public function __toString(): string
+    {
+        $rendered = $this->toPrompt();
+        return is_string($rendered) ? $rendered : json_encode($rendered, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    }
+
+    // ---------------------------------------------------------------
+    // Execution — the only place that talks to a driver
+    // ---------------------------------------------------------------
+
+    /** @param class-string<PromptDriverInterface>|PromptDriverInterface $driver */
+    public function driver(string|PromptDriverInterface $driver): self
+    {
+        if (is_string($driver)) {
+            if (!class_exists($driver) || !is_subclass_of($driver, PromptDriverInterface::class)) {
+                throw new Exception("Le driver spécifié n'existe pas ou ne respecte pas PromptDriverInterface : {$driver}");
+            }
+            $driver = new $driver();
+        }
+
+        $this->driver = $driver;
         return $this;
     }
 
+    public function process(): self
+    {
+        $this->driver ??= new OllamaDriver();
+        $this->output = $this->driver->process($this->spec);
+        return $this;
+    }
 
-    public function getOutput() : BuilderOutput{
+    public function getOutput(): ?BuilderOutput
+    {
         return $this->output;
-    }
-
-
-    public function getInput() : BuilderInput{
-        return $this->input;
-    }
-
-
-    public function setParams(array $params){
-        $this->params = $params;
-        return $this;
     }
 }
