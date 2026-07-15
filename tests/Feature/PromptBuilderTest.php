@@ -78,8 +78,8 @@ class PromptBuilderTest extends TestCase
 
         $prompt = $builder->toPrompt();
 
-        $this->assertStringContainsString('[Obligatoire] Cite tes sources', $prompt);
-        $this->assertStringContainsString('[Interdit] Ne jamais inventer de chiffres', $prompt);
+        $this->assertStringContainsString('[Required] Cite tes sources', $prompt);
+        $this->assertStringContainsString('[Forbidden] Ne jamais inventer de chiffres', $prompt);
     }
 
     public function test_sibling_instructions_share_the_same_depth(): void

@@ -164,6 +164,24 @@ class PromptBuilder
         return $this;
     }
 
+    /**
+     * Choose the language of the rendered section labels (# Role, [Required],
+     * Example n:, ...). Defaults to English when never set. The value is a
+     * locale code matching a bundled language file, e.g. 'en', 'fr', 'es',
+     * 'de', 'zh', 'ar'.
+     */
+    public function language(string $locale): self
+    {
+        $this->spec->locale = $locale;
+        return $this;
+    }
+
+    /** Alias of language(). */
+    public function locale(string $locale): self
+    {
+        return $this->language($locale);
+    }
+
     public function when(bool $condition, Closure $ifTrue, ?Closure $ifFalse = null): self
     {
         if ($condition) {

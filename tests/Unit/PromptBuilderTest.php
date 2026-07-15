@@ -166,4 +166,24 @@ class PromptBuilderTest extends TestCase
     {
         $this->assertNull(PromptBuilder::make()->getOutput());
     }
+
+    public function test_language_and_locale_set_the_spec_locale(): void
+    {
+        $this->assertSame('fr', PromptBuilder::make()->language('fr')->getSpec()->locale);
+        $this->assertSame('es', PromptBuilder::make()->locale('es')->getSpec()->locale);
+    }
+
+    public function test_locale_defaults_to_null_meaning_english(): void
+    {
+        $this->assertNull(PromptBuilder::make()->getSpec()->locale);
+    }
+
+    public function test_language_changes_the_rendered_labels(): void
+    {
+        $en = PromptBuilder::make()->context('C')->toPrompt();
+        $de = PromptBuilder::make()->context('C')->language('de')->toPrompt();
+
+        $this->assertStringContainsString('# Context', $en);
+        $this->assertStringContainsString('# Kontext', $de);
+    }
 }

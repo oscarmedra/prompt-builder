@@ -21,4 +21,19 @@ class PromptBuilderServiceProvider extends ServiceProvider
         // so two facade call-chains never share mutable PromptSpec state.
         $this->app->bind('promptbuilder', fn () => new PromptBuilder());
     }
+
+    public function boot(): void
+    {
+        // Register the bundled label translations under the 'promptbuilder'
+        // namespace so they're available as trans('promptbuilder::labels.*')
+        // and usable by Translation\Laravel\LaravelTranslator.
+        $this->loadTranslationsFrom(__DIR__ . '/../resources/lang', 'promptbuilder');
+
+        // Let applications publish and override the strings if they want to.
+        if ($this->app->runningInConsole()) {
+            $this->publishes([
+                __DIR__ . '/../resources/lang' => $this->app->langPath('vendor/promptbuilder'),
+            ], 'promptbuilder-lang');
+        }
+    }
 }

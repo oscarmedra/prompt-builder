@@ -30,6 +30,9 @@ class PromptSpec
 
     public ?string $question = null;
 
+    /** Locale used to render section labels (null = renderer default, English). */
+    public ?string $locale = null;
+
     /** Values available for {placeholder} interpolation inside text. */
     public array $params = [];
 

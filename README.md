@@ -117,11 +117,62 @@ $builder->toPrompt(new XmlRenderer());          // <prompt><persona>…</persona
 
 | Renderer | Output | Use for |
 | --- | --- | --- |
-| `TextRenderer` | Single string with `# Rôle`, `# Contexte`, … sections | Completion-style APIs, previews |
+| `TextRenderer` | Single string with `# Role`, `# Context`, … sections | Completion-style APIs, previews |
 | `ChatMessagesRenderer` | `{role, content}` message array | Chat APIs (Ollama `/api/chat`, OpenAI, Anthropic) |
 | `XmlRenderer` | Well-formed XML with explicit tags | Models that follow XML-delimited structure better |
 
 Write your own by implementing `Rendering\RendererInterface`.
+
+## Language (i18n)
+
+The section labels the renderer emits (`# Role`, `[Required]`, `Example n:`, …)
+are localized. **English is the default**; pick another language per builder:
+
+```php
+PromptBuilder::make()
+    ->context('...')
+    ->must('...')
+    ->language('fr')   // or ->locale('fr')
+    ->ask('...')
+    ->toPrompt();
+// -> "# Rôle", "# Contexte", "[Obligatoire] …", "# Question"
+```
+
+Bundled locales: **`en` (default), `es`, `fr`, `de`, `zh`, `ar`**. An unknown
+locale, or a key missing in a locale, falls back to English. Only the labels
+are translated — your own persona/context/instruction text is emitted verbatim,
+and `XmlRenderer` tag names stay in English on purpose (they're structural).
+
+Translation is handled by a framework-free `Translation\TranslatorInterface`.
+The default `Translation\ArrayTranslator` reads bundled PHP language files and
+needs no framework. Point it at your own files or supply your own
+implementation for full control:
+
+```php
+use NoahMedra\PromptBuilder\Rendering\TextRenderer;
+use NoahMedra\PromptBuilder\Translation\ArrayTranslator;
+
+$renderer = new TextRenderer(new ArrayTranslator('es', '/path/to/lang'));
+```
+
+### Using Laravel's translator
+
+Inside Laravel, the service provider registers the bundled strings under the
+`promptbuilder` translation namespace. Publish them to customize:
+
+```bash
+php artisan vendor:publish --tag=promptbuilder-lang
+```
+
+Use `Translation\Laravel\LaravelTranslator` to render through Laravel's
+translator (honouring the app locale and any overrides you published):
+
+```php
+use NoahMedra\PromptBuilder\Rendering\TextRenderer;
+use NoahMedra\PromptBuilder\Translation\Laravel\LaravelTranslator;
+
+$renderer = new TextRenderer(new LaravelTranslator(app('translator')));
+```
 
 ## Execution
 

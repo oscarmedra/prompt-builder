@@ -31,7 +31,7 @@ class FacadeTest extends TestCase
         $this->assertIsString($prompt);
         $this->assertStringContainsString('Assistant de test', $prompt);
         $this->assertStringContainsString('Contexte via la façade', $prompt);
-        $this->assertStringContainsString('[Obligatoire] Réponds en français', $prompt);
+        $this->assertStringContainsString('[Required] Réponds en français', $prompt);
         $this->assertStringContainsString('Une question via la façade ?', $prompt);
     }
 

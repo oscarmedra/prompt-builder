@@ -36,6 +36,7 @@ $builder = PromptBuilder::make()
     ->example('Résous x + 2 = 5', 'On isole x : x = 5 - 2 = 3.')
     ->withParams(['sujet' => 'les suites numériques', 'ton' => 'encourageant'])
     ->instruction('Adopte un ton {ton} en abordant {sujet}.')
+    ->language('fr') // section labels in French (default is English)
     ->ask('Explique ce qu\'est une suite arithmétique.');
 
 echo "=== Prompt texte (preview, sans I/O) ===\n";
